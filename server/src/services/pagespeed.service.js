@@ -1,4 +1,5 @@
 import axios from "axios";
+import https from "node:https";
 import {
   METRICS_FALLBACK,
   PAGESPEED_API_URL,
@@ -6,6 +7,8 @@ import {
   PAGESPEED_WARNING_MESSAGE
 } from "../config/analyze.constants.js";
 import { normalizeText } from "../utils/text.utils.js";
+
+const httpsAgent = new https.Agent({ keepAlive: true, family: 4 });
 
 export async function fetchPageSpeedMetrics(url) {
   const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY;
@@ -17,6 +20,7 @@ export async function fetchPageSpeedMetrics(url) {
   try {
     const response = await axios.get(PAGESPEED_API_URL, {
       timeout: PAGESPEED_TIMEOUT_MS,
+      httpsAgent,
       params: {
         url,
         key: apiKey,
@@ -36,7 +40,16 @@ export async function fetchPageSpeedMetrics(url) {
       },
       warning: null
     };
-  } catch {
+  } catch (error) {
+    const status = error?.response?.status;
+    const statusText = error?.response?.statusText;
+    const googleError = error?.response?.data?.error?.message;
+    const message = googleError || error?.message;
+    console.warn(
+      `[PageSpeed] Request failed${status ? `: ${status} ${statusText || ""}` : ""}${
+        message ? ` | ${String(message).slice(0, 240)}` : ""
+      }`
+    );
     return { metrics: METRICS_FALLBACK, warning: PAGESPEED_WARNING_MESSAGE };
   }
 }
