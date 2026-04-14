@@ -90,7 +90,9 @@
 
 .primaryButton,
 .secondaryButton {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 14px;
@@ -98,11 +100,35 @@
 }
 
 .primaryButton {
-  background: #18181b;
+  background: #229ed9;
   color: #ffffff;
 }
 
 .secondaryButton {
   border: 1px solid #d4d4d8;
   color: #18181b;
+}
+
+.telegramIcon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+
+.telegramIcon svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 158, 217, 0.35);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .primaryButton:hover {
+    background: #1b8fc6;
+  }
 }
