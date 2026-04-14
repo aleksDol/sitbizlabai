@@ -20,6 +20,7 @@ COPY package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/vite.config.js ./vite.config.js
 
 EXPOSE 5173
 
