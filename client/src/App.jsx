@@ -362,7 +362,9 @@ export default function App() {
 
       setLeadSubmitted(true);
     } catch (err) {
-      setLeadSubmitError(getFriendlyErrorMessage(err));
+      setLeadSubmitError(
+        err instanceof Error && err.message ? err.message : "Не удалось отправить заявку. Попробуйте ещё раз."
+      );
     } finally {
       setLeadSubmitting(false);
     }

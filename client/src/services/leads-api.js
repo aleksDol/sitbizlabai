@@ -4,7 +4,12 @@ function getLeadsApiBaseUrl() {
     return fromEnv.trim().replace(/\/+$/, "");
   }
 
-  // Analyzer UI runs on :5173, Next app runs on :3000 in docker-compose.
+  // If hosted behind the same domain (recommended on prod), default to current origin.
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  // Fallback for local dev when no env is provided.
   return "http://localhost:3000";
 }
 
