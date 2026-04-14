@@ -1,7 +1,22 @@
 import axios from "axios";
 
+function getAnalyzerApiBaseUrl() {
+  const fromEnv = import.meta.env.VITE_API_URL;
+  if (typeof fromEnv === "string" && fromEnv.trim()) {
+    return fromEnv.trim().replace(/\/+$/, "");
+  }
+
+  // Recommended production setup: same domain behind nginx at /analyzer-api
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}/analyzer-api`;
+  }
+
+  // Fallback for local dev when no env is provided.
+  return "http://localhost:5051";
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000"
+  baseURL: getAnalyzerApiBaseUrl()
 });
 
 export async function analyzeWebsite(url) {
