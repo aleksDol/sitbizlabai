@@ -1,0 +1,276 @@
+.page {
+  width: min(1120px, 100% - 48px);
+  margin: 48px auto 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 88px;
+}
+
+.section {
+  display: grid;
+  gap: 20px;
+}
+
+.kicker {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #52525b;
+}
+
+.h2 {
+  font-size: clamp(22px, 3.4vw, 34px);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.subheading {
+  max-width: 70ch;
+  font-size: 17px;
+  line-height: 1.75;
+  color: #52525b;
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.card {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 16px;
+  padding: 18px 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.cardTitle {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.cardText {
+  color: #52525b;
+  line-height: 1.65;
+  font-size: 15px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.buttonPrimary,
+.buttonSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 14px;
+  transition: 0.15s ease;
+  white-space: nowrap;
+}
+
+.buttonPrimary {
+  background: #111827;
+  color: #fff;
+}
+
+.buttonSecondary {
+  background: transparent;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.mutedLink {
+  color: #52525b;
+  font-size: 14px;
+}
+
+.hero {
+  display: grid;
+  gap: 22px;
+  padding: 28px 0 0;
+}
+
+.heroTitle {
+  font-size: clamp(36px, 6vw, 64px);
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+}
+
+.heroLead {
+  max-width: 70ch;
+  font-size: 18px;
+  line-height: 1.75;
+  color: #52525b;
+}
+
+.heroBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.badge {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 13px;
+  color: #111827;
+}
+
+.ctaBox {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.02);
+  display: grid;
+  gap: 12px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  color: #52525b;
+}
+
+.input {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  color: #111827;
+  outline: none;
+}
+
+.input:focus {
+  border-color: rgba(17, 24, 39, 0.35);
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+}
+
+.helper {
+  font-size: 13px;
+  color: #52525b;
+  line-height: 1.6;
+}
+
+.success {
+  font-size: 14px;
+  color: #14532d;
+}
+
+.error {
+  font-size: 14px;
+  color: #991b1b;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonPrimary:hover {
+    background: #0b1220;
+  }
+
+  .buttonSecondary:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+@media (max-width: 860px) {
+  .grid3 {
+    grid-template-columns: 1fr;
+  }
+
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    width: min(1120px, 100% - 28px);
+    margin-top: 28px;
+    gap: 72px;
+  }
+
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .kicker,
+  .subheading,
+  .cardText,
+  .mutedLink,
+  .label,
+  .helper {
+    color: rgba(255, 255, 255, 0.68);
+  }
+
+  .buttonPrimary {
+    background: #ededed;
+    color: #0a0a0a;
+  }
+
+  .buttonSecondary {
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
+  .card,
+  .badge,
+  .ctaBox {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .input {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  .input:focus {
+    border-color: rgba(237, 237, 237, 0.4);
+    box-shadow: 0 0 0 3px rgba(237, 237, 237, 0.08);
+  }
+
+  .badge {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .success {
+    color: #86efac;
+  }
+
+  .error {
+    color: #fca5a5;
+  }
+}
+

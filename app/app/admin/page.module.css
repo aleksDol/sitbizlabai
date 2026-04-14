@@ -1,0 +1,38 @@
+.page {
+  width: min(980px, 100% - 32px);
+  margin: 36px auto;
+}
+
+.card {
+  border: 1px solid #e4e4e7;
+  border-radius: 12px;
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.title {
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.link {
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.logout {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #18181b;
+  color: #ffffff;
+  cursor: pointer;
+}
