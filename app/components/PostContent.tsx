@@ -43,7 +43,11 @@ export function PostContent({
       <p className={styles.date}>{formatDate(postDate)}</p>
       <h1 className={styles.title}>{title}</h1>
 
-      {coverImageUrl ? <img className={styles.cover} src={coverImageUrl} alt={title} /> : null}
+      {coverImageUrl ? (
+        <div className={styles.coverWrap}>
+          <img className={styles.cover} src={coverImageUrl} alt={title} />
+        </div>
+      ) : null}
 
       <div className={styles.content} dangerouslySetInnerHTML={{ __html: content }} />
 
