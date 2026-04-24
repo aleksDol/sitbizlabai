@@ -138,10 +138,15 @@
 .ctaBox {
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 18px;
-  padding: 18px;
-  background: rgba(0, 0, 0, 0.02);
+  padding: 22px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.01));
   display: grid;
   gap: 12px;
+}
+
+.ctaButtons {
+  display: grid;
+  gap: 10px;
 }
 
 .formRow {
@@ -247,7 +252,7 @@
   .badge,
   .ctaBox {
     border-color: rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.04);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
   }
 
   .input {
