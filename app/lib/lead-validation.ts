@@ -57,7 +57,12 @@ function parseLeadStatus(value: unknown): LeadStatus | undefined {
 export type CreateLeadInput = {
   name: string;
   contact: string;
+  niche?: string | null;
   websiteUrl?: string | null;
+  hasWebsite?: boolean | null;
+  channels?: string[];
+  leadsPerMonth?: string | null;
+  detectedPlatform?: string | null;
   analysisText?: string | null;
   lossesText?: string | null;
   solutionOfferText?: string | null;
@@ -86,6 +91,35 @@ export function validateCreateLeadPayload(payload: unknown): ValidationResult<Pr
   const websiteUrl = normalizeOptionalString(payload.websiteUrl);
   if (payload.websiteUrl !== undefined && websiteUrl === undefined) {
     errors.push("Field 'websiteUrl' must be a string or null.");
+  }
+
+  const niche = normalizeOptionalString(payload.niche);
+  if (payload.niche !== undefined && niche === undefined) {
+    errors.push("Field 'niche' must be a string or null.");
+  }
+
+  const hasWebsite = normalizeOptionalBoolean(payload.hasWebsite);
+  if (payload.hasWebsite !== undefined && hasWebsite === undefined) {
+    errors.push("Field 'hasWebsite' must be a boolean or null.");
+  }
+
+  const channelsRaw = payload.channels;
+  const channels =
+    Array.isArray(channelsRaw) && channelsRaw.every((item) => typeof item === "string")
+      ? channelsRaw.map((item) => item.trim()).filter(Boolean)
+      : undefined;
+  if (channelsRaw !== undefined && channels === undefined) {
+    errors.push("Field 'channels' must be an array of strings.");
+  }
+
+  const leadsPerMonth = normalizeOptionalString(payload.leadsPerMonth);
+  if (payload.leadsPerMonth !== undefined && leadsPerMonth === undefined) {
+    errors.push("Field 'leadsPerMonth' must be a string or null.");
+  }
+
+  const detectedPlatform = normalizeOptionalString(payload.detectedPlatform);
+  if (payload.detectedPlatform !== undefined && detectedPlatform === undefined) {
+    errors.push("Field 'detectedPlatform' must be a string or null.");
   }
 
   const analysisText = normalizeOptionalString(payload.analysisText);
@@ -127,7 +161,12 @@ export function validateCreateLeadPayload(payload: unknown): ValidationResult<Pr
     data: {
       name,
       contact,
+      niche: niche ?? null,
       websiteUrl: websiteUrl ?? null,
+      hasWebsite: hasWebsite ?? null,
+      channels: channels ?? [],
+      leadsPerMonth: leadsPerMonth ?? null,
+      detectedPlatform: detectedPlatform ?? null,
       analysisText: analysisText ?? null,
       lossesText: lossesText ?? null,
       solutionOfferText: solutionOfferText ?? null,
@@ -184,4 +223,3 @@ export function parseLeadId(rawId: string): string | null {
   const id = rawId.trim();
   return id.length > 0 ? id : null;
 }
-

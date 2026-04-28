@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LeadStatus } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-auth";
@@ -31,6 +31,15 @@ function formatNullable(value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? "Да" : "Нет";
   return String(value);
+}
+
+function formatChannels(value: unknown): string {
+  if (!Array.isArray(value) || value.length === 0) {
+    return "—";
+  }
+
+  const normalized = value.filter((item) => typeof item === "string" && item.trim().length > 0);
+  return normalized.length > 0 ? normalized.join(", ") : "—";
 }
 
 export default async function AdminLeadDetailsPage({ params }: PageProps) {
@@ -88,7 +97,7 @@ export default async function AdminLeadDetailsPage({ params }: PageProps) {
             <h2 className={styles.cardTitle}>Что увидел клиент</h2>
             <div className={styles.textBlock}>
               <div className={styles.label} style={{ marginBottom: 6 }}>
-                analysisText
+                Анализ
               </div>
               <div className={lead.analysisText ? styles.textBlock : styles.muted}>
                 {lead.analysisText || "—"}
@@ -96,7 +105,7 @@ export default async function AdminLeadDetailsPage({ params }: PageProps) {
             </div>
             <div className={styles.textBlock}>
               <div className={styles.label} style={{ marginBottom: 6 }}>
-                lossesText
+                Потери
               </div>
               <div className={lead.lossesText ? styles.textBlock : styles.muted}>
                 {lead.lossesText || "—"}
@@ -104,7 +113,7 @@ export default async function AdminLeadDetailsPage({ params }: PageProps) {
             </div>
             <div className={styles.textBlock}>
               <div className={styles.label} style={{ marginBottom: 6 }}>
-                solutionOfferText
+                План
               </div>
               <div className={lead.solutionOfferText ? styles.textBlock : styles.muted}>
                 {lead.solutionOfferText || "—"}
@@ -115,14 +124,42 @@ export default async function AdminLeadDetailsPage({ params }: PageProps) {
 
         <div style={{ display: "grid", gap: 14 }}>
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Контекст заявки</h2>
+            <h2 className={styles.cardTitle}>Ответы квиза</h2>
             <div className={styles.row}>
-              <div className={styles.label}>siteType</div>
-              <div className={styles.value}>{formatNullable(lead.siteType)}</div>
+              <div className={styles.label}>niche</div>
+              <div className={styles.value}>{formatNullable(lead.niche)}</div>
+            </div>
+            <div className={styles.row}>
+              <div className={styles.label}>hasWebsite</div>
+              <div className={styles.value}>{formatNullable(lead.hasWebsite)}</div>
+            </div>
+            <div className={styles.row}>
+              <div className={styles.label}>websiteUrl</div>
+              <div className={styles.value}>{formatNullable(lead.websiteUrl)}</div>
+            </div>
+            <div className={styles.row}>
+              <div className={styles.label}>channels</div>
+              <div className={styles.value}>{formatChannels(lead.channels)}</div>
             </div>
             <div className={styles.row}>
               <div className={styles.label}>hasRepeatSales</div>
               <div className={styles.value}>{formatNullable(lead.hasRepeatSales)}</div>
+            </div>
+            <div className={styles.row}>
+              <div className={styles.label}>leadsPerMonth</div>
+              <div className={styles.value}>{formatNullable(lead.leadsPerMonth)}</div>
+            </div>
+            <div className={styles.row}>
+              <div className={styles.label}>detectedPlatform</div>
+              <div className={styles.value}>{formatNullable(lead.detectedPlatform)}</div>
+            </div>
+          </section>
+
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>Технический контекст</h2>
+            <div className={styles.row}>
+              <div className={styles.label}>siteType</div>
+              <div className={styles.value}>{formatNullable(lead.siteType)}</div>
             </div>
             <div className={styles.row}>
               <div className={styles.label}>trafficSources</div>
@@ -143,4 +180,3 @@ export default async function AdminLeadDetailsPage({ params }: PageProps) {
     </main>
   );
 }
-

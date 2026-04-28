@@ -1,19 +1,27 @@
-import { useMemo, useState } from "react";
-import { useLoadingStages } from "./hooks/use-loading-stages";
+﻿import { useMemo, useState } from "react";
+import { AnalyzerQuiz } from "./components/analyzer/AnalyzerQuiz";
+import { AnalysisProgress } from "./components/analyzer/AnalysisProgress";
+import { TypewriterText } from "./components/analyzer/TypewriterText";
 import { useTypewriter } from "./hooks/use-typewriter";
+import { useAnalysisProgress } from "./hooks/use-analysis-progress";
+import { FALLBACK_ANALYSIS_TEXT, MIN_LOADING_DURATION_MS } from "./constants/analyze-ui.constants";
 import {
-  FALLBACK_ANALYSIS_TEXT,
-  LOADING_STAGES,
-  MIN_LOADING_DURATION_MS
-} from "./constants/analyze-ui.constants";
-import {
-  analyzeWebsite,
+  analyzeBusiness,
   createSolutionOffer,
   estimateBusinessLosses
 } from "./services/analyze-api";
 import { createLead } from "./services/leads-api";
 import { wait } from "./utils/async.utils";
 import { getFriendlyErrorMessage } from "./utils/error.utils";
+
+const ANALYSIS_STEPS = [
+  { id: "business", label: "Считываем данные бизнеса", requiresWebsite: false },
+  { id: "site", label: "Проверяем сайт и структуру", requiresWebsite: true },
+  { id: "platform", label: "Определяем платформу сайта", requiresWebsite: true },
+  { id: "channels", label: "Оцениваем каналы привлечения", requiresWebsite: false },
+  { id: "losses", label: "Ищем потери в воронке", requiresWebsite: false },
+  { id: "plan", label: "Формируем план реализации", requiresWebsite: false }
+];
 
 const SECTION_MAPPERS = [
   { key: "score", label: "Общая оценка", match: ["общая оценка"] },
@@ -23,7 +31,7 @@ const SECTION_MAPPERS = [
   { key: "speed", label: "Скорость сайта", match: ["скорость сайта", "скорость"] }
 ];
 
-const BUSINESS_QUESTIONS = {
+const BUSINESS_QUESTIONS_WITH_SITE = {
   1: {
     title: "На чём сделан ваш сайт?",
     options: [
@@ -40,6 +48,23 @@ const BUSINESS_QUESTIONS = {
     ]
   },
   3: {
+    title: "Трафик приходит из одного источника или из нескольких?",
+    options: [
+      { label: "Один источник", value: "single" },
+      { label: "Несколько источников", value: "multiple" }
+    ]
+  }
+};
+
+const BUSINESS_QUESTIONS_NO_SITE = {
+  1: {
+    title: "Бывают ли у вас повторные продажи или допродажи?",
+    options: [
+      { label: "Да", value: true },
+      { label: "Нет", value: false }
+    ]
+  },
+  2: {
     title: "Трафик приходит из одного источника или из нескольких?",
     options: [
       { label: "Один источник", value: "single" },
@@ -118,6 +143,8 @@ function extractProblemsForLosses(fullAnalysis) {
 
 export default function App() {
   const [url, setUrl] = useState("");
+  const [quizAnswers, setQuizAnswers] = useState(null);
+  const [isQuizCompleted, setIsQuizCompleted] = useState(false);
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
@@ -149,21 +176,19 @@ export default function App() {
     site: ""
   });
 
-  const { loadingStep, start, stop, complete } = useLoadingStages(LOADING_STAGES.length);
+  const analysisSteps = useMemo(() => {
+    const hasWebsite = Boolean(quizAnswers?.hasWebsite);
+    return ANALYSIS_STEPS.filter((step) => !step.requiresWebsite || hasWebsite);
+  }, [quizAnswers]);
+
+  const { activeStep, progress, completeProgress, stopProgress } = useAnalysisProgress(
+    analysisSteps,
+    status === "loading"
+  );
 
   const fullAnalysis = useMemo(() => result?.analysis || FALLBACK_ANALYSIS_TEXT, [result]);
   const { typedText, isTyping } = useTypewriter(fullAnalysis, Boolean(result) && status === "success");
   const analysisCards = useMemo(() => splitAnalysisIntoCards(typedText), [typedText]);
-
-  const { typedText: typedLossesText, isTyping: isLossesTyping } = useTypewriter(
-    lossesText,
-    lossesStatus === "success"
-  );
-
-  const { typedText: typedSolutionText, isTyping: isSolutionTyping } = useTypewriter(
-    solutionOfferText,
-    solutionStatus === "success"
-  );
 
   function resetFinalStages() {
     setSelectedSiteType("");
@@ -183,6 +208,21 @@ export default function App() {
     setLeadForm({ name: "", contact: "", site: "" });
   }
 
+  function buildAnalysisInput() {
+    if (!quizAnswers) {
+      return null;
+    }
+
+    return {
+      niche: quizAnswers.businessType || "",
+      websiteUrl: quizAnswers.websiteUrl || "",
+      hasWebsite: Boolean(quizAnswers.hasWebsite),
+      channels: Array.isArray(quizAnswers.acquisitionChannels) ? quizAnswers.acquisitionChannels : [],
+      hasRepeatSales: quizAnswers.repeatSales || "",
+      leadsPerMonth: quizAnswers.leadsPerMonth || ""
+    };
+  }
+
   async function runAnalysis() {
     setError("");
     setResult(null);
@@ -195,20 +235,29 @@ export default function App() {
 
     resetFinalStages();
 
-    start();
-
     try {
-      const [siteData] = await Promise.all([analyzeWebsite(url), wait(MIN_LOADING_DURATION_MS)]);
+      const analysisInput = buildAnalysisInput();
+      const shouldAnalyzeByWebsite = analysisInput?.hasWebsite && url.trim();
 
-      complete();
+      const request = shouldAnalyzeByWebsite
+        ? analyzeBusiness({
+            ...analysisInput,
+            websiteUrl: url.trim()
+          })
+        : analyzeBusiness({
+            ...analysisInput,
+            websiteUrl: ""
+          });
+
+      const [siteData] = await Promise.all([request, wait(MIN_LOADING_DURATION_MS)]);
+      completeProgress();
       setResult(siteData);
       setWarnings(Array.isArray(siteData?.warnings) ? siteData.warnings : []);
       setStatus("success");
     } catch (err) {
+      stopProgress();
       setError(getFriendlyErrorMessage(err));
       setStatus("error");
-    } finally {
-      stop();
     }
   }
 
@@ -218,10 +267,16 @@ export default function App() {
   }
 
   async function onRetry() {
-    if (!url.trim()) {
+    if (quizAnswers?.hasWebsite && !url.trim()) {
       return;
     }
     await runAnalysis();
+  }
+
+  function onQuizComplete(answers) {
+    setQuizAnswers(answers);
+    setUrl(answers.websiteUrl || "");
+    setIsQuizCompleted(true);
   }
 
   async function onEstimateLosses() {
@@ -229,7 +284,7 @@ export default function App() {
 
     if (!analysisProblems) {
       setLossesStatus("error");
-      setLossesError("Не удалось выделить проблемы для расчета потерь.");
+      setLossesError("Не удалось выделить проблемы для расчёта потерь.");
       return;
     }
 
@@ -239,7 +294,7 @@ export default function App() {
     resetFinalStages();
 
     try {
-      const response = await estimateBusinessLosses(analysisProblems);
+      const response = await estimateBusinessLosses(analysisProblems, buildAnalysisInput());
       setLossesText(response?.losses || "Не удалось рассчитать потери. Попробуйте ещё раз.");
       setLossesStatus("success");
     } catch (err) {
@@ -263,7 +318,10 @@ export default function App() {
   }
 
   async function requestSolutionOffer(nextAnswers) {
-    if (!fullAnalysis || !lossesText || !selectedSiteType) {
+    const hasWebsite = Boolean(quizAnswers?.hasWebsite);
+    const siteTypeForRequest = hasWebsite ? selectedSiteType : "unknown";
+
+    if (!fullAnalysis || !lossesText || (hasWebsite && !selectedSiteType)) {
       setSolutionStatus("error");
       setSolutionError("Не хватает данных для персонального предложения.");
       return;
@@ -279,7 +337,11 @@ export default function App() {
       const response = await createSolutionOffer({
         analysisText: fullAnalysis,
         lossesText,
-        siteType: selectedSiteType,
+        siteType: siteTypeForRequest,
+        niche: quizAnswers?.businessType || "",
+        hasWebsite,
+        channels: Array.isArray(quizAnswers?.acquisitionChannels) ? quizAnswers.acquisitionChannels : [],
+        leadsPerMonth: quizAnswers?.leadsPerMonth || "",
         hasRepeatSales: nextAnswers.hasRepeatSales,
         trafficSources: nextAnswers.trafficSources
       });
@@ -295,23 +357,25 @@ export default function App() {
   }
 
   async function onAnswerQuestion(value) {
-    if (questionStep === 1) {
+    const hasWebsite = Boolean(quizAnswers?.hasWebsite);
+
+    if (hasWebsite && questionStep === 1) {
       setSelectedSiteType(value);
       setQuestionStep(2);
       return;
     }
 
-    if (questionStep === 2) {
+    if ((hasWebsite && questionStep === 2) || (!hasWebsite && questionStep === 1)) {
       const nextAnswers = {
         ...businessAnswers,
         hasRepeatSales: value
       };
       setBusinessAnswers(nextAnswers);
-      setQuestionStep(3);
+      setQuestionStep(hasWebsite ? 3 : 2);
       return;
     }
 
-    if (questionStep === 3) {
+    if ((hasWebsite && questionStep === 3) || (!hasWebsite && questionStep === 2)) {
       const nextAnswers = {
         ...businessAnswers,
         trafficSources: value
@@ -329,7 +393,7 @@ export default function App() {
     setLeadSubmitError("");
     setLeadForm((prev) => ({
       ...prev,
-      site: url
+      site: quizAnswers?.hasWebsite ? url : ""
     }));
   }
 
@@ -350,7 +414,12 @@ export default function App() {
       await createLead({
         name: leadForm.name?.trim() || "",
         contact: leadForm.contact?.trim() || "",
-        websiteUrl: leadForm.site?.trim() || null,
+        niche: quizAnswers?.businessType?.trim() || null,
+        websiteUrl: quizAnswers?.hasWebsite ? leadForm.site?.trim() || null : null,
+        hasWebsite: typeof quizAnswers?.hasWebsite === "boolean" ? quizAnswers.hasWebsite : null,
+        channels: Array.isArray(quizAnswers?.acquisitionChannels) ? quizAnswers.acquisitionChannels : [],
+        leadsPerMonth: quizAnswers?.leadsPerMonth || null,
+        detectedPlatform: quizAnswers?.hasWebsite ? result?.detectedPlatform?.platform || null : null,
         analysisText: fullAnalysis?.trim() || null,
         lossesText: lossesText?.trim() || null,
         solutionOfferText: solutionOfferText?.trim() || null,
@@ -370,46 +439,54 @@ export default function App() {
     }
   }
 
-  const currentQuestion = questionStep > 0 ? BUSINESS_QUESTIONS[questionStep] : null;
+  const questionMap = quizAnswers?.hasWebsite ? BUSINESS_QUESTIONS_WITH_SITE : BUSINESS_QUESTIONS_NO_SITE;
+  const currentQuestion = questionStep > 0 ? questionMap[questionStep] : null;
 
   return (
     <main className="page">
       <section className="shell">
         <header className="hero fade-in">
-          <h1>Аудит сайта за 30 секунд</h1>
+          <h1>Аудит бизнеса за 30 секунд</h1>
           <p>Найдём ошибки в UX, SEO и конверсии</p>
         </header>
 
-        <form onSubmit={onSubmit} className="analyze-form fade-in delay-1">
-          <input
-            type="url"
-            placeholder="https://example.com"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            required
-          />
-          <button type="submit" disabled={status === "loading"}>
-            {status === "loading" ? "Анализируем..." : "Анализировать"}
-          </button>
-        </form>
+        {!isQuizCompleted && <AnalyzerQuiz onComplete={onQuizComplete} />}
+
+        {isQuizCompleted && (
+          <section className="quiz-summary fade-slide-in">
+            <p>
+              {quizAnswers?.hasWebsite
+                ? "Контекст сохранён. Проверьте сайт и запустите анализ."
+                : "Контекст сохранён. Запустите анализ по данным бизнеса."}
+            </p>
+          </section>
+        )}
+
+        {isQuizCompleted && quizAnswers?.hasWebsite && (
+          <form onSubmit={onSubmit} className="analyze-form fade-in delay-1">
+            <input
+              type="url"
+              placeholder="https://example.com"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              required
+            />
+            <button type="submit" disabled={status === "loading"}>
+              {status === "loading" ? "Анализируем..." : "Анализировать"}
+            </button>
+          </form>
+        )}
+
+        {isQuizCompleted && !quizAnswers?.hasWebsite && (
+          <div className="analyze-no-site-wrap fade-in delay-1">
+            <button type="button" className="analyze-no-site-btn" onClick={onRetry} disabled={status === "loading"}>
+              {status === "loading" ? "Анализируем..." : "Анализировать без сайта"}
+            </button>
+          </div>
+        )}
 
         {status === "loading" && (
-          <section className="loader fade-in delay-2">
-            <p className="loader-title">Анализируем сайт...</p>
-            <div className="stages">
-              {LOADING_STAGES.map((stage, index) => {
-                const stateClass =
-                  index < loadingStep ? "done" : index === loadingStep ? "active" : "pending";
-
-                return (
-                  <p key={stage} className={`stage ${stateClass}`}>
-                    <span>{index + 1}</span>
-                    {stage}
-                  </p>
-                );
-              })}
-            </div>
-          </section>
+          <AnalysisProgress steps={analysisSteps} activeStep={activeStep} progress={progress} />
         )}
 
         {status === "error" && (
@@ -461,8 +538,7 @@ export default function App() {
             {lossesStatus === "success" && (
               <article className="result-card losses-card">
                 <h2>💸 Что вы теряете</h2>
-                <p>{typedLossesText}</p>
-                {isLossesTyping && <span className="typing-cursor">|</span>}
+                <TypewriterText text={lossesText} enabled={lossesStatus === "success"} />
               </article>
             )}
 
@@ -506,8 +582,7 @@ export default function App() {
             {solutionStatus === "success" && (
               <article className="result-card solution-card">
                 <h2>🚀 План реализации</h2>
-                <p className="structured-text">{typedSolutionText}</p>
-                {isSolutionTyping && <span className="typing-cursor">|</span>}
+                <TypewriterText text={solutionOfferText} enabled={solutionStatus === "success"} className="structured-text" />
 
                 <button type="button" className="implement-cta" onClick={onOpenLeadForm}>
                   Да, давайте реализуем
@@ -515,7 +590,11 @@ export default function App() {
 
                 {showLeadForm && (
                   <section className="lead-form-wrap fade-slide-in">
-                    <h3>Оставьте контакты — подготовим для вас план внедрения под ваш сайт</h3>
+                    <h3>Хотите внедрить это у себя?</h3>
+                    <p>
+                      Оставьте контакты — мы разберём вашу ситуацию и покажем, как собрать понятную систему под ваш
+                      бизнес: сайт, заявки, аналитику и повторные касания.
+                    </p>
 
                     <form className="lead-form" onSubmit={onLeadSubmit}>
                       <label>
@@ -544,7 +623,7 @@ export default function App() {
                           type="url"
                           value={leadForm.site}
                           onChange={(event) => onLeadFieldChange("site", event.target.value)}
-                          required
+                          required={Boolean(quizAnswers?.hasWebsite)}
                         />
                       </label>
 

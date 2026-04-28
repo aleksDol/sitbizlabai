@@ -1,4 +1,4 @@
-export const LOADING_STAGES = [
+﻿export const LOADING_STAGES = [
   "Подключаемся к сайту",
   "Анализируем структуру",
   "Проверяем скорость",

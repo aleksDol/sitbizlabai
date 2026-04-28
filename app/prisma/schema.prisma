@@ -52,7 +52,12 @@ model Lead {
   id                String     @id @default(cuid())
   name              String
   contact           String
+  niche             String?
   websiteUrl        String?
+  hasWebsite        Boolean?
+  channels          String[]   @default([])
+  leadsPerMonth     String?
+  detectedPlatform  String?
 
   analysisText      String?
   lossesText        String?

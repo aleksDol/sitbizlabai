@@ -24,8 +24,13 @@ export async function analyzeWebsite(url) {
   return response.data;
 }
 
-export async function estimateBusinessLosses(analysisProblems) {
-  const response = await api.post("/analyze/losses", { analysisProblems });
+export async function analyzeBusiness(analysisInput) {
+  const response = await api.post("/analyze", { analysisInput });
+  return response.data;
+}
+
+export async function estimateBusinessLosses(analysisProblems, analysisInput = null) {
+  const response = await api.post("/analyze/losses", { analysisProblems, analysisInput });
   return response.data;
 }
 

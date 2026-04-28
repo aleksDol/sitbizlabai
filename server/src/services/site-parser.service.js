@@ -8,6 +8,7 @@ import {
 import { ERROR_CODES, ERROR_MESSAGES } from "../config/error.constants.js";
 import { HttpError } from "../utils/http-error.js";
 import { normalizeText, toArrayWithFallback } from "../utils/text.utils.js";
+import { detectPlatform } from "./platform-detector.service.js";
 
 function extractMainText($) {
   const cloned = $("body").clone();
@@ -45,6 +46,7 @@ async function fetchHtml(url) {
 export async function parseWebsite(urlObject) {
   const html = await fetchHtml(urlObject.href);
   const $ = cheerio.load(html);
+  const detectedPlatform = detectPlatform(html);
 
   return {
     site: urlObject.hostname,
@@ -59,6 +61,7 @@ export async function parseWebsite(urlObject) {
     mainText: extractMainText($) || "Not found",
     linksCount: $("a").length,
     buttonsCount: $("button").length,
-    hasForms: $("form").length > 0
+    hasForms: $("form").length > 0,
+    detectedPlatform
   };
 }

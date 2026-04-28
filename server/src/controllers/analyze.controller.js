@@ -1,5 +1,5 @@
 import { ERROR_CODES } from "../config/error.constants.js";
-import { analyzeSite } from "../services/analyze.service.js";
+import { analyzeBusinessWithoutWebsite, analyzeSite } from "../services/analyze.service.js";
 import {
   fetchBusinessLosses,
   fetchBusinessLossesFromAnalysisText,
@@ -7,7 +7,7 @@ import {
   fetchSolutionOfferFromContext
 } from "../services/openai-analysis.service.js";
 import { HttpError } from "../utils/http-error.js";
-import { validateAnalyzePayload } from "../validators/url.validator.js";
+import { validateAnalysisInput, validateAnalyzePayload } from "../validators/url.validator.js";
 
 const LOSSES_FALLBACK_TEXT = "Не удалось рассчитать потери. Попробуйте ещё раз.";
 const IMPLEMENTATION_PLAN_FALLBACK_TEXT =
@@ -16,6 +16,21 @@ const SOLUTION_OFFER_FALLBACK_TEXT = "Не удалось сформироват
 
 export async function analyzeController(req, res, next) {
   try {
+    const inputPayload = req.body?.analysisInput;
+
+    if (inputPayload && typeof inputPayload === "object") {
+      const analysisInput = validateAnalysisInput(inputPayload);
+
+      if (analysisInput.hasWebsite && analysisInput.websiteUrl) {
+        const parsedUrl = validateAnalyzePayload({ url: analysisInput.websiteUrl });
+        const result = await analyzeSite(parsedUrl, analysisInput);
+        return res.status(200).json(result);
+      }
+
+      const result = await analyzeBusinessWithoutWebsite(analysisInput);
+      return res.status(200).json(result);
+    }
+
     const parsedUrl = validateAnalyzePayload(req.body);
     const result = await analyzeSite(parsedUrl);
     res.status(200).json(result);
@@ -28,6 +43,7 @@ export async function analyzeController(req, res, next) {
 export async function lossesController(req, res, next) {
   try {
     const analysisProblems = req.body?.analysisProblems;
+    const inputPayload = req.body?.analysisInput;
 
     if (!analysisProblems || typeof analysisProblems !== "string" || !analysisProblems.trim()) {
       throw new HttpError(
@@ -37,7 +53,19 @@ export async function lossesController(req, res, next) {
       );
     }
 
-    const losses = await fetchBusinessLosses(analysisProblems.trim());
+    const analysisInput =
+      inputPayload && typeof inputPayload === "object"
+        ? {
+            hasWebsite: inputPayload.hasWebsite === true,
+            channels: Array.isArray(inputPayload.channels)
+              ? inputPayload.channels.filter((item) => typeof item === "string")
+              : [],
+            hasRepeatSales:
+              typeof inputPayload.hasRepeatSales === "string" ? inputPayload.hasRepeatSales : ""
+          }
+        : null;
+
+    const losses = await fetchBusinessLosses(analysisProblems.trim(), analysisInput);
     res.status(200).json({ losses });
   } catch (error) {
     next(error);
@@ -68,6 +96,11 @@ export async function implementationPlanController(req, res) {
   const analysisText = req.body?.analysisText;
   const lossesText = req.body?.lossesText;
   const siteType = req.body?.siteType;
+  const niche = req.body?.niche;
+  const hasWebsite = req.body?.hasWebsite;
+  const channels = req.body?.channels;
+  const leadsPerMonth = req.body?.leadsPerMonth;
+  const hasRepeatSales = req.body?.hasRepeatSales;
 
   if (!analysisText || typeof analysisText !== "string" || !analysisText.trim()) {
     return res.status(400).json({
@@ -96,11 +129,25 @@ export async function implementationPlanController(req, res) {
     });
   }
 
+  const normalizedHasWebsite = typeof hasWebsite === "boolean" ? hasWebsite : true;
+  const normalizedChannels = Array.isArray(channels)
+    ? channels.filter((item) => typeof item === "string")
+    : [];
+  const normalizedHasRepeatSales =
+    typeof hasRepeatSales === "string" ? hasRepeatSales : "";
+  const normalizedNiche = typeof niche === "string" ? niche : "";
+  const normalizedLeadsPerMonth = typeof leadsPerMonth === "string" ? leadsPerMonth : "";
+
   try {
     const planText = await fetchImplementationPlanFromContext({
       analysisText: analysisText.trim(),
       lossesText: lossesText.trim(),
-      siteType
+      siteType,
+      niche: normalizedNiche,
+      hasWebsite: normalizedHasWebsite,
+      channels: normalizedChannels,
+      leadsPerMonth: normalizedLeadsPerMonth,
+      hasRepeatSales: normalizedHasRepeatSales
     });
 
     return res.status(200).json({ planText });
@@ -113,6 +160,10 @@ export async function solutionOfferController(req, res) {
   const analysisText = req.body?.analysisText;
   const lossesText = req.body?.lossesText;
   const siteType = req.body?.siteType;
+  const niche = req.body?.niche;
+  const hasWebsite = req.body?.hasWebsite;
+  const channels = req.body?.channels;
+  const leadsPerMonth = req.body?.leadsPerMonth;
   const hasRepeatSales = req.body?.hasRepeatSales;
   const trafficSources = req.body?.trafficSources;
 
@@ -162,10 +213,21 @@ export async function solutionOfferController(req, res) {
   }
 
   try {
+    const normalizedHasWebsite = typeof hasWebsite === "boolean" ? hasWebsite : true;
+    const normalizedChannels = Array.isArray(channels)
+      ? channels.filter((item) => typeof item === "string")
+      : [];
+    const normalizedNiche = typeof niche === "string" ? niche : "";
+    const normalizedLeadsPerMonth = typeof leadsPerMonth === "string" ? leadsPerMonth : "";
+
     const solutionOfferText = await fetchSolutionOfferFromContext({
       analysisText: analysisText.trim(),
       lossesText: lossesText.trim(),
       siteType,
+      niche: normalizedNiche,
+      hasWebsite: normalizedHasWebsite,
+      channels: normalizedChannels,
+      leadsPerMonth: normalizedLeadsPerMonth,
       hasRepeatSales,
       trafficSources
     });

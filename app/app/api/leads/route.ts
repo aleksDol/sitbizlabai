@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateCreateLeadPayload } from "@/lib/lead-validation";
+import { sendTelegramLeadNotification } from "@/lib/telegram.service";
 
 function withCors(response: NextResponse): NextResponse {
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -23,6 +24,14 @@ export async function POST(request: Request) {
     }
 
     const lead = await prisma.lead.create({ data: validation.data });
+
+    try {
+      const adminBaseUrl = new URL(request.url).origin;
+      await sendTelegramLeadNotification(lead, { adminBaseUrl });
+    } catch (e) {
+      console.error("Telegram error", e);
+    }
+
     return withCors(NextResponse.json(lead, { status: 201 }));
   } catch (error) {
     if (error instanceof SyntaxError) {
@@ -45,4 +54,3 @@ export async function GET() {
     return withCors(NextResponse.json({ error: "Internal server error." }, { status: 500 }));
   }
 }
-

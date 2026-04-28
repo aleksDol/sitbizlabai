@@ -34,3 +34,20 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Environment
+
+Add these variables for Telegram notifications of new leads:
+
+```env
+TELEGRAM_BOT_TOKEN=...
+TELEGRAM_CHAT_ID=-100...
+TELEGRAM_THREAD_ID=123
+ADMIN_BASE_URL=https://yourdomain.com
+```
+
+Notes:
+- `TELEGRAM_CHAT_ID` is the supergroup id (usually starts with `-100`).
+- `TELEGRAM_THREAD_ID` is the topic/thread id in that supergroup (for example, the "Заявки" topic).
+- If `TELEGRAM_THREAD_ID` is not set, the bot sends messages to the main chat.
+- `ADMIN_BASE_URL` is used to build a direct link to `/admin/leads/{id}` in Telegram.
+- If Telegram env vars are missing, lead creation still works and notifications are skipped.
