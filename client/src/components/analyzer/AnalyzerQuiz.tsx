@@ -59,6 +59,27 @@ export function AnalyzerQuiz({ onComplete }) {
   function onFinish() {
     if (!canProceed) return;
 
+    try {
+      window.dispatchEvent(
+        new CustomEvent("sitebizai_quiz_go_to_analysis_click", {
+          detail: {
+            hasWebsite,
+            channelsCount: channels.length,
+            repeatSales,
+            leadsPerMonth
+          }
+        })
+      );
+    } catch {
+      // Tracking should never block the quiz flow.
+    }
+
+    try {
+      window?.["ym"]?.(108548080, "reachGoal", "quiz_go_to_analysis_click");
+    } catch {
+      // Tracking should never block the quiz flow.
+    }
+
     onComplete({
       businessType: businessType.trim(),
       hasWebsite,
