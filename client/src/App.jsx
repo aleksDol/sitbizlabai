@@ -13,6 +13,7 @@ import {
 import { createLead } from "./services/leads-api";
 import { wait } from "./utils/async.utils";
 import { getFriendlyErrorMessage } from "./utils/error.utils";
+import { reachMetrikaGoal } from "./utils/metrika";
 
 const ANALYSIS_STEPS = [
   { id: "business", label: "Считываем данные бизнеса", requiresWebsite: false },
@@ -156,11 +157,7 @@ function trackLeadFormSubmitted(payload = {}) {
     // Silent: tracking should never break the main flow.
   }
 
-  try {
-    window.ym?.(108548080, "reachGoal", "lead_form_submitted");
-  } catch {
-    // Silent: metrika errors should not affect UX.
-  }
+  reachMetrikaGoal("lead_form_submitted");
 }
 
 export default function App() {

@@ -1,4 +1,5 @@
 ﻿import { useMemo, useState } from "react";
+import { reachMetrikaGoal } from "../../utils/metrika";
 
 const ACQUISITION_CHANNELS = [
   "Telegram",
@@ -73,12 +74,7 @@ export function AnalyzerQuiz({ onComplete }) {
     } catch {
       // Tracking should never block the quiz flow.
     }
-
-    try {
-      window?.["ym"]?.(108548080, "reachGoal", "quiz_go_to_analysis_click");
-    } catch {
-      // Tracking should never block the quiz flow.
-    }
+    reachMetrikaGoal("quiz_go_to_analysis_click");
 
     onComplete({
       businessType: businessType.trim(),
