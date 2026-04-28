@@ -141,6 +141,28 @@ function extractProblemsForLosses(fullAnalysis) {
   return (problemsCard?.body || fullAnalysis || "").trim();
 }
 
+function trackLeadFormSubmitted(payload = {}) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent("sitebizai_lead_form_submitted", {
+        detail: payload
+      })
+    );
+  } catch {
+    // Silent: tracking should never break the main flow.
+  }
+
+  try {
+    window.ym?.(108548080, "reachGoal", "lead_form_submitted");
+  } catch {
+    // Silent: metrika errors should not affect UX.
+  }
+}
+
 export default function App() {
   const [url, setUrl] = useState("");
   const [quizAnswers, setQuizAnswers] = useState(null);
@@ -430,6 +452,13 @@ export default function App() {
       });
 
       setLeadSubmitted(true);
+      trackLeadFormSubmitted({
+        hasWebsite: Boolean(quizAnswers?.hasWebsite),
+        niche: quizAnswers?.businessType || "",
+        channelsCount: Array.isArray(quizAnswers?.acquisitionChannels)
+          ? quizAnswers.acquisitionChannels.length
+          : 0
+      });
     } catch (err) {
       setLeadSubmitError(
         err instanceof Error && err.message ? err.message : "Не удалось отправить заявку. Попробуйте ещё раз."
