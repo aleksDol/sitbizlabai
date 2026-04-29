@@ -32,6 +32,18 @@
 - несколько источников -> CRM/админка/аналитика
 
 Если сайта нет, не анализируй сайт и не задавай вопросы про платформу.
+Не задавай пользователю повторные вопросы, если данные уже есть в контексте.
+Используй:
+- channels, чтобы понять количество источников трафика
+- hasRepeatSales, чтобы понять нужны ли повторные касания/бот/автоворонка
+- detectedPlatform, чтобы понять текущую техническую базу сайта
+- hasWebsite, чтобы понять, нужно улучшать сайт или создавать точку входа с нуля
+
+Если detectedPlatform confidence high или medium — используй это как технический контекст.
+Если detectedPlatform unknown или null — не делай выводов о платформе и не спрашивай пользователя.
+
+Если channels содержит 2 и более канала — предлагай CRM/админку/аналитику как способ понимать источники заявок.
+Если channels содержит 1 канал — объясни риск зависимости от одного канала и предложи простую аналитику без перегруза.
 
 Финальный ответ должен быть СТРОГО в структуре:
 
@@ -76,6 +88,7 @@ export function buildImplementationPlanUserPrompt({
   analysisText,
   lossesText,
   siteType,
+  detectedPlatform = null,
   niche = "",
   hasWebsite = true,
   channels = [],
@@ -92,6 +105,7 @@ export function buildImplementationPlanUserPrompt({
 Каналы привлечения: ${channelsLabel}
 Заявок в месяц: ${leadsPerMonth || "Не указано"}
 Повторные продажи: ${hasRepeatSales || "Не указано"}
+detectedPlatform: ${detectedPlatform ? JSON.stringify(detectedPlatform) : "null"}
 
 Анализ:
 ${analysisText}

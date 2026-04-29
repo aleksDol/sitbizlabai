@@ -532,6 +532,59 @@ body {
   background: #f8fafc;
 }
 
+.plan-loading {
+  border: 1px solid #dbe3f2;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f8fbff;
+}
+
+.plan-loading h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.plan-loading p {
+  margin: 8px 0 12px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.plan-loading-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  overflow: hidden;
+}
+
+.plan-loading-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  transition: width 0.45s ease;
+}
+
+.plan-loading-steps {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.plan-loading-steps li {
+  color: #64748b;
+  font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.plan-loading-steps li.active {
+  color: #0f172a;
+}
+
 .losses-card h2 {
   color: #1d4ed8;
 }

@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnalyzerQuiz } from "./components/analyzer/AnalyzerQuiz";
 import { AnalysisProgress } from "./components/analyzer/AnalysisProgress";
 import { TypewriterText } from "./components/analyzer/TypewriterText";
@@ -32,47 +32,12 @@ const SECTION_MAPPERS = [
   { key: "speed", label: "Скорость сайта", match: ["скорость сайта", "скорость"] }
 ];
 
-const BUSINESS_QUESTIONS_WITH_SITE = {
-  1: {
-    title: "На чём сделан ваш сайт?",
-    options: [
-      { label: "Конструктор", value: "builder" },
-      { label: "Самописный", value: "custom" },
-      { label: "Не знаю", value: "unknown" }
-    ]
-  },
-  2: {
-    title: "Бывают ли у вас повторные продажи или допродажи?",
-    options: [
-      { label: "Да", value: true },
-      { label: "Нет", value: false }
-    ]
-  },
-  3: {
-    title: "Трафик приходит из одного источника или из нескольких?",
-    options: [
-      { label: "Один источник", value: "single" },
-      { label: "Несколько источников", value: "multiple" }
-    ]
-  }
-};
-
-const BUSINESS_QUESTIONS_NO_SITE = {
-  1: {
-    title: "Бывают ли у вас повторные продажи или допродажи?",
-    options: [
-      { label: "Да", value: true },
-      { label: "Нет", value: false }
-    ]
-  },
-  2: {
-    title: "Трафик приходит из одного источника или из нескольких?",
-    options: [
-      { label: "Один источник", value: "single" },
-      { label: "Несколько источников", value: "multiple" }
-    ]
-  }
-};
+const PLAN_LOADING_STEPS = [
+  "Учитываем нишу и каналы привлечения",
+  "Проверяем данные по сайту",
+  "Подбираем подходящие решения",
+  "Формируем понятный план"
+];
 
 function normalizeHeading(heading) {
   return heading
@@ -209,12 +174,7 @@ export default function App() {
   const [lossesError, setLossesError] = useState("");
 
   const [selectedSiteType, setSelectedSiteType] = useState("");
-
-  const [questionStep, setQuestionStep] = useState(0);
-  const [businessAnswers, setBusinessAnswers] = useState({
-    hasRepeatSales: null,
-    trafficSources: null
-  });
+  const [planLoadingStepIndex, setPlanLoadingStepIndex] = useState(0);
 
   const [solutionStatus, setSolutionStatus] = useState("idle");
   const [solutionOfferText, setSolutionOfferText] = useState("");
@@ -246,12 +206,7 @@ export default function App() {
 
   function resetFinalStages() {
     setSelectedSiteType("");
-
-    setQuestionStep(0);
-    setBusinessAnswers({
-      hasRepeatSales: null,
-      trafficSources: null
-    });
+    setPlanLoadingStepIndex(0);
 
     setSolutionStatus("idle");
     setSolutionOfferText("");
@@ -261,6 +216,19 @@ export default function App() {
     setLeadSubmitted(false);
     setLeadForm({ name: "", contact: "", site: "" });
   }
+
+  useEffect(() => {
+    if (solutionStatus !== "loading") {
+      setPlanLoadingStepIndex(0);
+      return undefined;
+    }
+
+    const timer = setInterval(() => {
+      setPlanLoadingStepIndex((prev) => (prev + 1) % PLAN_LOADING_STEPS.length);
+    }, 650);
+
+    return () => clearInterval(timer);
+  }, [solutionStatus]);
 
   function buildAnalysisInput() {
     if (!quizAnswers || typeof quizAnswers.hasWebsite !== "boolean") {
@@ -360,28 +328,25 @@ export default function App() {
   }
 
   function onOpenPlanStep() {
-    setSelectedSiteType("");
-    setQuestionStep(1);
-    setBusinessAnswers({
-      hasRepeatSales: null,
-      trafficSources: null
-    });
-    setSolutionStatus("idle");
-    setSolutionOfferText("");
-    setSolutionError("");
-    setShowLeadForm(false);
-    setLeadSubmitted(false);
     trackPlanCtaClicked({
       hasWebsite: Boolean(quizAnswers?.hasWebsite),
       lossesReady: Boolean(lossesText?.trim())
     });
+    requestSolutionOffer();
   }
 
-  async function requestSolutionOffer(nextAnswers) {
+  async function requestSolutionOffer() {
     const hasWebsite = Boolean(quizAnswers?.hasWebsite);
-    const siteTypeForRequest = hasWebsite ? selectedSiteType : "unknown";
+    const channels = Array.isArray(quizAnswers?.acquisitionChannels) ? quizAnswers.acquisitionChannels : [];
+    const trafficSources = channels.length > 1 ? "multiple" : "single";
+    const detectedPlatform = hasWebsite ? result?.detectedPlatform || null : null;
+    const platformName =
+      detectedPlatform && detectedPlatform.platform && detectedPlatform.platform !== "unknown"
+        ? detectedPlatform.platform
+        : "unknown";
+    const hasRepeatSales = quizAnswers?.hasRepeatSales || "unknown";
 
-    if (!fullAnalysis || !lossesText || (hasWebsite && !selectedSiteType)) {
+    if (!fullAnalysis || !lossesText) {
       setSolutionStatus("error");
       setSolutionError("Не хватает данных для персонального предложения.");
       return;
@@ -392,57 +357,34 @@ export default function App() {
     setSolutionError("");
     setShowLeadForm(false);
     setLeadSubmitted(false);
+    const startedAt = Date.now();
 
     try {
       const response = await createSolutionOffer({
         analysisText: fullAnalysis,
         lossesText,
-        siteType: siteTypeForRequest,
-        niche: quizAnswers?.niche || "",
+        siteType: platformName,
+        niche: quizAnswers?.niche || null,
         hasWebsite,
-        channels: Array.isArray(quizAnswers?.acquisitionChannels) ? quizAnswers.acquisitionChannels : [],
-        leadsPerMonth: "",
-        hasRepeatSales: nextAnswers.hasRepeatSales,
-        trafficSources: nextAnswers.trafficSources
+        websiteUrl: quizAnswers?.websiteUrl || null,
+        channels,
+        hasRepeatSales,
+        trafficSources,
+        detectedPlatform
       });
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < 1000) {
+        await wait(1000 - elapsed);
+      }
 
       setSolutionOfferText(
         response?.solutionOfferText || "Не удалось сформировать предложение. Попробуйте ещё раз."
       );
       setSolutionStatus("success");
+      setSelectedSiteType(platformName);
     } catch (err) {
       setSolutionStatus("error");
       setSolutionError(getFriendlyErrorMessage(err));
-    }
-  }
-
-  async function onAnswerQuestion(value) {
-    const hasWebsite = Boolean(quizAnswers?.hasWebsite);
-
-    if (hasWebsite && questionStep === 1) {
-      setSelectedSiteType(value);
-      setQuestionStep(2);
-      return;
-    }
-
-    if ((hasWebsite && questionStep === 2) || (!hasWebsite && questionStep === 1)) {
-      const nextAnswers = {
-        ...businessAnswers,
-        hasRepeatSales: value
-      };
-      setBusinessAnswers(nextAnswers);
-      setQuestionStep(hasWebsite ? 3 : 2);
-      return;
-    }
-
-    if ((hasWebsite && questionStep === 3) || (!hasWebsite && questionStep === 2)) {
-      const nextAnswers = {
-        ...businessAnswers,
-        trafficSources: value
-      };
-      setBusinessAnswers(nextAnswers);
-      setQuestionStep(0);
-      await requestSolutionOffer(nextAnswers);
     }
   }
 
@@ -485,8 +427,15 @@ export default function App() {
         solutionOfferText: solutionOfferText?.trim() || null,
         siteType: selectedSiteType || null,
         hasRepeatSales:
-          typeof businessAnswers.hasRepeatSales === "boolean" ? businessAnswers.hasRepeatSales : null,
-        trafficSources: businessAnswers.trafficSources || null
+          quizAnswers?.hasRepeatSales === "yes"
+            ? true
+            : quizAnswers?.hasRepeatSales === "no"
+              ? false
+              : null,
+        trafficSources:
+          Array.isArray(quizAnswers?.acquisitionChannels) && quizAnswers.acquisitionChannels.length > 1
+            ? "multiple"
+            : "single"
       });
 
       setLeadSubmitted(true);
@@ -505,9 +454,6 @@ export default function App() {
       setLeadSubmitting(false);
     }
   }
-
-  const questionMap = quizAnswers?.hasWebsite ? BUSINESS_QUESTIONS_WITH_SITE : BUSINESS_QUESTIONS_NO_SITE;
-  const currentQuestion = questionStep > 0 ? questionMap[questionStep] : null;
 
   return (
     <main className="page">
@@ -591,26 +537,24 @@ export default function App() {
               </section>
             )}
 
-            {questionStep > 0 && currentQuestion && (
-              <section className="plan-site-type fade-slide-in">
-                <p>{currentQuestion.title}</p>
-                <div className="site-type-buttons">
-                  {currentQuestion.options.map((option) => (
-                    <button
-                      key={option.label}
-                      type="button"
-                      className="site-type-btn"
-                      onClick={() => onAnswerQuestion(option.value)}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
-
             {solutionStatus === "loading" && (
-              <section className="losses-loading">Формируем план реализации...</section>
+              <section className="plan-loading fade-slide-in">
+                <h3>Готовим план реализации</h3>
+                <p>Собираем ответы, анализ сайта и подбираем решение под ваш бизнес</p>
+                <div className="plan-loading-progress">
+                  <span
+                    className="plan-loading-progress-fill"
+                    style={{ width: `${((planLoadingStepIndex + 1) / PLAN_LOADING_STEPS.length) * 100}%` }}
+                  />
+                </div>
+                <ul className="plan-loading-steps">
+                  {PLAN_LOADING_STEPS.map((step, index) => (
+                    <li key={step} className={index <= planLoadingStepIndex ? "active" : ""}>
+                      {step}
+                    </li>
+                  ))}
+                </ul>
+              </section>
             )}
 
             {solutionStatus === "error" && (

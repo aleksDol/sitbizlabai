@@ -38,14 +38,24 @@ export async function createSolutionOffer({
   analysisText,
   lossesText,
   siteType,
-  hasRepeatSales,
-  trafficSources
+  niche = null,
+  hasWebsite = true,
+  websiteUrl = null,
+  channels = [],
+  hasRepeatSales = "unknown",
+  detectedPlatform = null,
+  trafficSources = "single"
 }) {
   const response = await api.post("/solution-offer", {
     analysisText,
     lossesText,
     siteType,
+    niche,
+    hasWebsite,
+    websiteUrl,
+    channels,
     hasRepeatSales,
+    detectedPlatform,
     trafficSources
   });
   return response.data;

@@ -1,4 +1,4 @@
-import { ERROR_CODES } from "../config/error.constants.js";
+﻿import { ERROR_CODES } from "../config/error.constants.js";
 import { analyzeBusinessWithoutWebsite, analyzeSite } from "../services/analyze.service.js";
 import {
   fetchBusinessLosses,
@@ -9,10 +9,10 @@ import {
 import { HttpError } from "../utils/http-error.js";
 import { validateAnalysisInput, validateAnalyzePayload } from "../validators/url.validator.js";
 
-const LOSSES_FALLBACK_TEXT = "Не удалось рассчитать потери. Попробуйте ещё раз.";
+const LOSSES_FALLBACK_TEXT = "Не удалось рассчитать потери. Попробуйте еще раз.";
 const IMPLEMENTATION_PLAN_FALLBACK_TEXT =
-  "Не удалось сформировать план реализации. Попробуйте ещё раз.";
-const SOLUTION_OFFER_FALLBACK_TEXT = "Не удалось сформировать предложение. Попробуйте ещё раз.";
+  "Не удалось сформировать план реализации. Попробуйте еще раз.";
+const SOLUTION_OFFER_FALLBACK_TEXT = "Не удалось сформировать предложение. Попробуйте еще раз.";
 
 export async function analyzeController(req, res, next) {
   try {
@@ -122,11 +122,11 @@ export async function implementationPlanController(req, res) {
     });
   }
 
-  if (!["builder", "custom", "unknown"].includes(siteType)) {
+  if (typeof siteType !== "string" || !siteType.trim()) {
     return res.status(400).json({
       error: {
         code: ERROR_CODES.INVALID_BODY,
-        message: "Передайте корректный siteType: builder, custom или unknown."
+        message: "Передайте корректный siteType."
       }
     });
   }
@@ -135,8 +135,7 @@ export async function implementationPlanController(req, res) {
   const normalizedChannels = Array.isArray(channels)
     ? channels.filter((item) => typeof item === "string")
     : [];
-  const normalizedHasRepeatSales =
-    typeof hasRepeatSales === "string" ? hasRepeatSales : "";
+  const normalizedHasRepeatSales = typeof hasRepeatSales === "string" ? hasRepeatSales : "";
   const normalizedNiche = typeof niche === "string" ? niche : "";
   const normalizedLeadsPerMonth = typeof leadsPerMonth === "string" ? leadsPerMonth : "";
 
@@ -164,7 +163,9 @@ export async function solutionOfferController(req, res) {
   const siteType = req.body?.siteType;
   const niche = req.body?.niche;
   const hasWebsite = req.body?.hasWebsite;
+  const websiteUrl = req.body?.websiteUrl;
   const channels = req.body?.channels;
+  const detectedPlatform = req.body?.detectedPlatform;
   const leadsPerMonth = req.body?.leadsPerMonth;
   const hasRepeatSales = req.body?.hasRepeatSales;
   const trafficSources = req.body?.trafficSources;
@@ -173,7 +174,7 @@ export async function solutionOfferController(req, res) {
     return res.status(400).json({
       error: {
         code: ERROR_CODES.INVALID_BODY,
-        message: "Передайте analysisText с результатами анализа сайта."
+        message: "Передайте analysisText с результатами анализа."
       }
     });
   }
@@ -187,51 +188,44 @@ export async function solutionOfferController(req, res) {
     });
   }
 
-  if (!["builder", "custom", "unknown"].includes(siteType)) {
-    return res.status(400).json({
-      error: {
-        code: ERROR_CODES.INVALID_BODY,
-        message: "Передайте корректный siteType: builder, custom или unknown."
-      }
-    });
-  }
-
-  if (typeof hasRepeatSales !== "boolean") {
-    return res.status(400).json({
-      error: {
-        code: ERROR_CODES.INVALID_BODY,
-        message: "Передайте hasRepeatSales как boolean."
-      }
-    });
-  }
-
-  if (!["single", "multiple"].includes(trafficSources)) {
-    return res.status(400).json({
-      error: {
-        code: ERROR_CODES.INVALID_BODY,
-        message: "Передайте корректный trafficSources: single или multiple."
-      }
-    });
-  }
-
   try {
     const normalizedHasWebsite = typeof hasWebsite === "boolean" ? hasWebsite : true;
     const normalizedChannels = Array.isArray(channels)
       ? channels.filter((item) => typeof item === "string")
       : [];
     const normalizedNiche = typeof niche === "string" ? niche : "";
+    const normalizedWebsiteUrl = typeof websiteUrl === "string" && websiteUrl.trim() ? websiteUrl.trim() : null;
+    const normalizedDetectedPlatform =
+      detectedPlatform && typeof detectedPlatform === "object" ? detectedPlatform : null;
+    const normalizedSiteType =
+      typeof siteType === "string" && siteType.trim() ? siteType.trim() : "unknown";
     const normalizedLeadsPerMonth = typeof leadsPerMonth === "string" ? leadsPerMonth : "";
+    const normalizedHasRepeatSales =
+      hasRepeatSales === true
+        ? "yes"
+        : hasRepeatSales === false
+          ? "no"
+          : typeof hasRepeatSales === "string" && ["yes", "no", "unknown"].includes(hasRepeatSales)
+            ? hasRepeatSales
+            : "unknown";
+    const normalizedTrafficSources = ["single", "multiple"].includes(trafficSources)
+      ? trafficSources
+      : normalizedChannels.length > 1
+        ? "multiple"
+        : "single";
 
     const solutionOfferText = await fetchSolutionOfferFromContext({
       analysisText: analysisText.trim(),
       lossesText: lossesText.trim(),
-      siteType,
+      siteType: normalizedSiteType,
       niche: normalizedNiche,
       hasWebsite: normalizedHasWebsite,
+      websiteUrl: normalizedWebsiteUrl,
+      detectedPlatform: normalizedDetectedPlatform,
       channels: normalizedChannels,
       leadsPerMonth: normalizedLeadsPerMonth,
-      hasRepeatSales,
-      trafficSources
+      hasRepeatSales: normalizedHasRepeatSales,
+      trafficSources: normalizedTrafficSources
     });
 
     return res.status(200).json({ solutionOfferText });
