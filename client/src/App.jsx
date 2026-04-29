@@ -16,27 +16,27 @@ import { getFriendlyErrorMessage } from "./utils/error.utils";
 import { reachMetrikaGoal } from "./utils/metrika";
 
 const ANALYSIS_STEPS = [
-  { id: "business", label: "Считываем данные бизнеса", requiresWebsite: false },
-  { id: "site", label: "Проверяем сайт и структуру", requiresWebsite: true },
-  { id: "platform", label: "Определяем платформу сайта", requiresWebsite: true },
-  { id: "channels", label: "Оцениваем каналы привлечения", requiresWebsite: false },
-  { id: "losses", label: "Ищем потери в воронке", requiresWebsite: false },
-  { id: "plan", label: "Формируем план реализации", requiresWebsite: false }
+  { id: "business", label: "РЎС‡РёС‚С‹РІР°РµРј РґР°РЅРЅС‹Рµ Р±РёР·РЅРµСЃР°", requiresWebsite: false },
+  { id: "site", label: "РџСЂРѕРІРµСЂСЏРµРј СЃР°Р№С‚ Рё СЃС‚СЂСѓРєС‚СѓСЂСѓ", requiresWebsite: true },
+  { id: "platform", label: "РћРїСЂРµРґРµР»СЏРµРј РїР»Р°С‚С„РѕСЂРјСѓ СЃР°Р№С‚Р°", requiresWebsite: true },
+  { id: "channels", label: "РћС†РµРЅРёРІР°РµРј РєР°РЅР°Р»С‹ РїСЂРёРІР»РµС‡РµРЅРёСЏ", requiresWebsite: false },
+  { id: "losses", label: "РС‰РµРј РїРѕС‚РµСЂРё РІ РІРѕСЂРѕРЅРєРµ", requiresWebsite: false },
+  { id: "plan", label: "Р¤РѕСЂРјРёСЂСѓРµРј РїР»Р°РЅ СЂРµР°Р»РёР·Р°С†РёРё", requiresWebsite: false }
 ];
 
 const SECTION_MAPPERS = [
-  { key: "score", label: "Общая оценка", match: ["общая оценка"] },
-  { key: "problems", label: "Проблемы", match: ["главные проблемы", "проблемы"] },
-  { key: "strengths", label: "Сильные стороны", match: ["сильные стороны"] },
-  { key: "recommendations", label: "Рекомендации", match: ["как улучшить", "рекомендации"] },
-  { key: "speed", label: "Скорость сайта", match: ["скорость сайта", "скорость"] }
+  { key: "score", label: "РћР±С‰Р°СЏ РѕС†РµРЅРєР°", match: ["РѕР±С‰Р°СЏ РѕС†РµРЅРєР°"] },
+  { key: "problems", label: "РџСЂРѕР±Р»РµРјС‹", match: ["РіР»Р°РІРЅС‹Рµ РїСЂРѕР±Р»РµРјС‹", "РїСЂРѕР±Р»РµРјС‹"] },
+  { key: "strengths", label: "РЎРёР»СЊРЅС‹Рµ СЃС‚РѕСЂРѕРЅС‹", match: ["СЃРёР»СЊРЅС‹Рµ СЃС‚РѕСЂРѕРЅС‹"] },
+  { key: "recommendations", label: "Р РµРєРѕРјРµРЅРґР°С†РёРё", match: ["РєР°Рє СѓР»СѓС‡С€РёС‚СЊ", "СЂРµРєРѕРјРµРЅРґР°С†РёРё"] },
+  { key: "speed", label: "РЎРєРѕСЂРѕСЃС‚СЊ СЃР°Р№С‚Р°", match: ["СЃРєРѕСЂРѕСЃС‚СЊ СЃР°Р№С‚Р°", "СЃРєРѕСЂРѕСЃС‚СЊ"] }
 ];
 
 const PLAN_LOADING_STEPS = [
-  "Учитываем нишу и каналы привлечения",
-  "Проверяем данные по сайту",
-  "Подбираем подходящие решения",
-  "Формируем понятный план"
+  "РЈС‡РёС‚С‹РІР°РµРј РЅРёС€Сѓ Рё РєР°РЅР°Р»С‹ РїСЂРёРІР»РµС‡РµРЅРёСЏ",
+  "РџСЂРѕРІРµСЂСЏРµРј РґР°РЅРЅС‹Рµ РїРѕ СЃР°Р№С‚Сѓ",
+  "РџРѕРґР±РёСЂР°РµРј РїРѕРґС…РѕРґСЏС‰РёРµ СЂРµС€РµРЅРёСЏ",
+  "Р¤РѕСЂРјРёСЂСѓРµРј РїРѕРЅСЏС‚РЅС‹Р№ РїР»Р°РЅ"
 ];
 
 function normalizeHeading(heading) {
@@ -76,7 +76,7 @@ function splitAnalysisIntoCards(text) {
   const matches = [...source.matchAll(headingRegex)];
 
   if (matches.length === 0) {
-    return [{ key: "other", title: "Результат анализа", body: source }];
+    return [{ key: "other", title: "Р РµР·СѓР»СЊС‚Р°С‚ Р°РЅР°Р»РёР·Р°", body: source }];
   }
 
   const cards = [];
@@ -94,7 +94,7 @@ function splitAnalysisIntoCards(text) {
     cards.push({
       key: mapped.key,
       title: mapped.label,
-      body: body || "Без деталей"
+      body: body || "Р‘РµР· РґРµС‚Р°Р»РµР№"
     });
   }
 
@@ -118,30 +118,30 @@ function parseImplementationCards(rawText) {
   const text = (rawText || "").trim();
   if (!text) return null;
 
-  const headerMatch = text.match(/🚀\s*Что стоит внедрить/i);
+  const headerMatch = text.match(/рџљЂ\s*Р§С‚Рѕ СЃС‚РѕРёС‚ РІРЅРµРґСЂРёС‚СЊ/i);
   if (!headerMatch || headerMatch.index === undefined) return null;
 
   const sectionStart = headerMatch.index;
   const tail = text.slice(sectionStart);
-  const nextHeaderMatch = tail.match(/\n(?:📈\s*Если коротко|🛠\s*Что мы можем сделать для вас|👉\s*Финал:|💡\s*Хотите внедрить)/i);
+  const nextHeaderMatch = tail.match(/\n(?:рџ“€\s*Р•СЃР»Рё РєРѕСЂРѕС‚РєРѕ|рџ› \s*Р§С‚Рѕ РјС‹ РјРѕР¶РµРј СЃРґРµР»Р°С‚СЊ РґР»СЏ РІР°СЃ|рџ‘‰\s*Р¤РёРЅР°Р»:|рџ’Ў\s*РҐРѕС‚РёС‚Рµ РІРЅРµРґСЂРёС‚СЊ)/i);
   const sectionEnd = nextHeaderMatch ? sectionStart + nextHeaderMatch.index : text.length;
 
   const before = text.slice(0, sectionStart).trim();
   const section = text.slice(sectionStart, sectionEnd).trim();
   const after = text.slice(sectionEnd).trim();
 
-  const chunks = section.split(/Проблема:/i).slice(1);
+  const chunks = section.split(/РџСЂРѕР±Р»РµРјР°:/i).slice(1);
   if (chunks.length === 0) return null;
 
   const cards = [];
   for (const chunk of chunks) {
-    const solutionSplit = chunk.split(/Решение:/i);
+    const solutionSplit = chunk.split(/Р РµС€РµРЅРёРµ:/i);
     if (solutionSplit.length < 2) return null;
 
     const problem = solutionSplit[0].trim();
-    const solutionAndResult = solutionSplit.slice(1).join("Решение:").trim();
+    const solutionAndResult = solutionSplit.slice(1).join("Р РµС€РµРЅРёРµ:").trim();
 
-    const resultSplit = solutionAndResult.split(/(?:Что получит бизнес|Результат):/i);
+    const resultSplit = solutionAndResult.split(/(?:Р§С‚Рѕ РїРѕР»СѓС‡РёС‚ Р±РёР·РЅРµСЃ|Р РµР·СѓР»СЊС‚Р°С‚):/i);
     if (resultSplit.length < 2) return null;
 
     const solution = resultSplit[0].trim();
@@ -164,23 +164,62 @@ function stripImplementationSection(rawText) {
   const text = (rawText || "").trim();
   if (!text) return "";
 
-  const startMatch = text.match(/\u{1F680}\s*Что стоит внедрить/i);
-  if (!startMatch || startMatch.index === undefined) {
-    return text;
+  const lines = text.split("\n");
+  const resultLines = [];
+  let skipMode = false;
+
+  const isSectionStart = (line) => {
+    const value = line.trim().toLowerCase();
+    return (
+      value.startsWith("🚀") ||
+      value.startsWith("🛠") ||
+      value.includes("что стоит внедрить") ||
+      value.includes("что стоит реализовать") ||
+      value.includes("что мы можем сделать для вас")
+    );
+  };
+
+  const isNextKnownSection = (line) => {
+    const value = line.trim().toLowerCase();
+    return value.startsWith("📊") || value.startsWith("⚠️") || value.startsWith("📈");
+  };
+
+  const isDuplicateCtaLine = (line) => {
+    const value = line.trim().toLowerCase();
+    return (
+      value.includes("призыв к действию") ||
+      value.includes("готовы увеличить") ||
+      value.includes("оставьте контакты") ||
+      value.includes("напишите нам")
+    );
+  };
+
+  for (const line of lines) {
+    if (!skipMode && isSectionStart(line)) {
+      skipMode = true;
+      continue;
+    }
+
+    if (skipMode) {
+      if (isNextKnownSection(line)) {
+        skipMode = false;
+      } else {
+        continue;
+      }
+    }
+
+    if (!isDuplicateCtaLine(line)) {
+      resultLines.push(line);
+    }
   }
 
-  const start = startMatch.index;
-  const tail = text.slice(start);
-  const nextHeader = tail.match(/\n(?:\u{1F4C8}\s*Если коротко|\u{1F6E0}\s*Что мы можем сделать для вас|\u{1F449}\s*Финал:|\u{1F4A1}\s*Хотите внедрить)/iu);
-  const end = nextHeader ? start + nextHeader.index : text.length;
-
-  return `${text.slice(0, start).trim()}\n\n${text.slice(end).trim()}`.replace(/\n{3,}/g, "\n\n").trim();
+  return resultLines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function mapPriorityLabel(priority) {
-  if (priority === "critical") return "🔥 critical";
-  if (priority === "optional") return "➕ optional";
-  return "⚡ important";
+  if (priority === "critical") return "рџ”Ґ critical";
+  if (priority === "optional") return "вћ• optional";
+  return "вљЎ important";
 }
 
 function trackLeadFormSubmitted(payload = {}) {
@@ -411,7 +450,7 @@ export default function App() {
 
     if (!analysisProblems) {
       setLossesStatus("error");
-      setLossesError("Не удалось выделить проблемы для расчёта потерь.");
+      setLossesError("РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РґРµР»РёС‚СЊ РїСЂРѕР±Р»РµРјС‹ РґР»СЏ СЂР°СЃС‡С‘С‚Р° РїРѕС‚РµСЂСЊ.");
       return;
     }
 
@@ -428,7 +467,7 @@ export default function App() {
 
     try {
       const response = await estimateBusinessLosses(analysisProblems, buildAnalysisInput());
-      setLossesText(response?.losses || "Не удалось рассчитать потери. Попробуйте ещё раз.");
+      setLossesText(response?.losses || "РќРµ СѓРґР°Р»РѕСЃСЊ СЂР°СЃСЃС‡РёС‚Р°С‚СЊ РїРѕС‚РµСЂРё. РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰С‘ СЂР°Р·.");
       setLossesStatus("success");
     } catch (err) {
       setLossesError(getFriendlyErrorMessage(err));
@@ -450,14 +489,15 @@ export default function App() {
     const trafficSources = channels.length > 1 ? "multiple" : "single";
     const detectedPlatform = hasWebsite ? result?.detectedPlatform || null : null;
     const platformName =
-      detectedPlatform && detectedPlatform.platform && detectedPlatform.platform !== "unknown"
+      hasWebsite && detectedPlatform && detectedPlatform.platform && detectedPlatform.platform !== "unknown"
         ? detectedPlatform.platform
         : "unknown";
+    const siteTypeForPlan = hasWebsite ? platformName : null;
     const hasRepeatSales = quizAnswers?.hasRepeatSales || "unknown";
 
     if (!fullAnalysis || !lossesText) {
       setSolutionStatus("error");
-      setSolutionError("Не хватает данных для персонального предложения.");
+      setSolutionError("РќРµ С…РІР°С‚Р°РµС‚ РґР°РЅРЅС‹С… РґР»СЏ РїРµСЂСЃРѕРЅР°Р»СЊРЅРѕРіРѕ РїСЂРµРґР»РѕР¶РµРЅРёСЏ.");
       return;
     }
 
@@ -473,7 +513,7 @@ export default function App() {
       const response = await createSolutionOffer({
         analysisText: fullAnalysis,
         lossesText,
-        siteType: platformName,
+        siteType: siteTypeForPlan,
         niche: quizAnswers?.niche || null,
         hasWebsite,
         websiteUrl: quizAnswers?.websiteUrl || null,
@@ -488,11 +528,11 @@ export default function App() {
       }
 
       setSolutionOfferText(
-        response?.solutionOfferText || "Не удалось сформировать предложение. Попробуйте ещё раз."
+        response?.solutionOfferText || "РќРµ СѓРґР°Р»РѕСЃСЊ СЃС„РѕСЂРјРёСЂРѕРІР°С‚СЊ РїСЂРµРґР»РѕР¶РµРЅРёРµ. РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰С‘ СЂР°Р·."
       );
       setSolutionPlanCards(Array.isArray(response?.planCards) ? response.planCards : []);
       setSolutionStatus("success");
-      setSelectedSiteType(platformName);
+      setSelectedSiteType(siteTypeForPlan || "unknown");
     } catch (err) {
       setSolutionPlanCards([]);
       setSolutionStatus("error");
@@ -560,7 +600,7 @@ export default function App() {
       });
     } catch (err) {
       setLeadSubmitError(
-        err instanceof Error && err.message ? err.message : "Не удалось отправить заявку. Попробуйте ещё раз."
+        err instanceof Error && err.message ? err.message : "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ Р·Р°СЏРІРєСѓ. РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰С‘ СЂР°Р·."
       );
     } finally {
       setLeadSubmitting(false);
@@ -571,15 +611,15 @@ export default function App() {
     <main className="page">
       <section className="shell">
         <header className="hero fade-in">
-          <h1>Аудит бизнеса за 30 секунд</h1>
-          <p>Найдём ошибки в UX, SEO и конверсии</p>
+          <h1>РђСѓРґРёС‚ Р±РёР·РЅРµСЃР° Р·Р° 30 СЃРµРєСѓРЅРґ</h1>
+          <p>РќР°Р№РґС‘Рј РѕС€РёР±РєРё РІ UX, SEO Рё РєРѕРЅРІРµСЂСЃРёРё</p>
         </header>
 
         {!isQuizCompleted && <AnalyzerQuiz onComplete={onQuizComplete} />}
 
         {isQuizCompleted && (
           <section className="quiz-summary fade-slide-in">
-            <p>{quizAnswers?.hasWebsite ? "Запускаем анализ сайта..." : "Запускаем анализ бизнеса..."}</p>
+            <p>{quizAnswers?.hasWebsite ? "Р—Р°РїСѓСЃРєР°РµРј Р°РЅР°Р»РёР· СЃР°Р№С‚Р°..." : "Р—Р°РїСѓСЃРєР°РµРј Р°РЅР°Р»РёР· Р±РёР·РЅРµСЃР°..."}</p>
           </section>
         )}
 
@@ -591,7 +631,7 @@ export default function App() {
           <section className="error-box fade-in delay-2">
             <p>{error}</p>
             <button type="button" className="retry-btn" onClick={onRetry}>
-              Попробовать снова
+              РџРѕРїСЂРѕР±РѕРІР°С‚СЊ СЃРЅРѕРІР°
             </button>
           </section>
         )}
@@ -621,38 +661,38 @@ export default function App() {
                 onClick={onEstimateLosses}
                 disabled={lossesStatus === "loading"}
               >
-                Да, хочу узнать, что я теряю
+                Р”Р°, С…РѕС‡Сѓ СѓР·РЅР°С‚СЊ, С‡С‚Рѕ СЏ С‚РµСЂСЏСЋ
               </button>
             </div>
 
-            {lossesStatus === "loading" && <section className="losses-loading">Считаем потери...</section>}
+            {lossesStatus === "loading" && <section className="losses-loading">РЎС‡РёС‚Р°РµРј РїРѕС‚РµСЂРё...</section>}
 
             {lossesStatus === "error" && (
               <section className="error-box">
-                <p>{lossesError || "Не удалось рассчитать потери. Попробуйте ещё раз."}</p>
+                <p>{lossesError || "РќРµ СѓРґР°Р»РѕСЃСЊ СЂР°СЃСЃС‡РёС‚Р°С‚СЊ РїРѕС‚РµСЂРё. РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰С‘ СЂР°Р·."}</p>
               </section>
             )}
 
             {lossesStatus === "success" && (
               <article className="result-card losses-card">
-                <h2>💸 Что вы теряете</h2>
+                <h2>рџ’ё Р§С‚Рѕ РІС‹ С‚РµСЂСЏРµС‚Рµ</h2>
                 <TypewriterText text={lossesText} enabled={lossesStatus === "success"} />
               </article>
             )}
 
             {lossesStatus === "success" && (
               <section className="plan-cta-wrap">
-                <h3>Давайте обсудим план реализации</h3>
+                <h3>Р”Р°РІР°Р№С‚Рµ РѕР±СЃСѓРґРёРј РїР»Р°РЅ СЂРµР°Р»РёР·Р°С†РёРё</h3>
                 <button type="button" className="plan-open-btn" onClick={onOpenPlanStep}>
-                  Да, давайте
+                  Р”Р°, РґР°РІР°Р№С‚Рµ
                 </button>
               </section>
             )}
 
             {solutionStatus === "loading" && (
               <section className="plan-loading fade-slide-in">
-                <h3>Готовим план реализации</h3>
-                <p>Собираем ответы, анализ сайта и подбираем решение под ваш бизнес</p>
+                <h3>Р“РѕС‚РѕРІРёРј РїР»Р°РЅ СЂРµР°Р»РёР·Р°С†РёРё</h3>
+                <p>РЎРѕР±РёСЂР°РµРј РѕС‚РІРµС‚С‹, Р°РЅР°Р»РёР· СЃР°Р№С‚Р° Рё РїРѕРґР±РёСЂР°РµРј СЂРµС€РµРЅРёРµ РїРѕРґ РІР°С€ Р±РёР·РЅРµСЃ</p>
                 <div className="plan-loading-progress">
                   <span
                     className="plan-loading-progress-fill"
@@ -671,13 +711,13 @@ export default function App() {
 
             {solutionStatus === "error" && (
               <section className="error-box">
-                <p>{solutionError || "Не удалось сформировать план реализации. Попробуйте ещё раз."}</p>
+                <p>{solutionError || "РќРµ СѓРґР°Р»РѕСЃСЊ СЃС„РѕСЂРјРёСЂРѕРІР°С‚СЊ РїР»Р°РЅ СЂРµР°Р»РёР·Р°С†РёРё. РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰С‘ СЂР°Р·."}</p>
               </section>
             )}
 
             {solutionStatus === "success" && (
               <article className="result-card solution-card">
-                <h2>🚀 План реализации</h2>
+                <h2>рџљЂ РџР»Р°РЅ СЂРµР°Р»РёР·Р°С†РёРё</h2>
                 <>
                   <p className="structured-text">{typedSolutionText}</p>
                   {isTypingSolution && <span className="typing-cursor">|</span>}
@@ -693,7 +733,7 @@ export default function App() {
                     ))}
 
                     <section className="plan-cards-section">
-                      <h3>🚀 Что стоит внедрить</h3>
+                      <h3>рџљЂ Р§С‚Рѕ СЃС‚РѕРёС‚ РІРЅРµРґСЂРёС‚СЊ</h3>
                       {parsedImplementationCards.cards.map((card, index) => (
                         <div
                           key={`${card.problem}-${index}`}
@@ -702,17 +742,17 @@ export default function App() {
                         >
                           <div className="plan-card-priority">{mapPriorityLabel(card.priority)}</div>
                           <div className="card-problem">
-                            🔴 Проблема
+                            рџ”ґ РџСЂРѕР±Р»РµРјР°
                             <br />
                             {card.problem}
                           </div>
                           <div className="card-solution">
-                            🔵 Решение
+                            рџ”µ Р РµС€РµРЅРёРµ
                             <br />
                             {card.solution}
                           </div>
                           <div className="card-result">
-                            🟢 Результат
+                            рџџў Р РµР·СѓР»СЊС‚Р°С‚
                             <br />
                             {card.result}
                           </div>
@@ -729,20 +769,20 @@ export default function App() {
                 ) : null}
 
                 <button type="button" className="implement-cta" onClick={onOpenLeadForm}>
-                  Да, давайте реализуем
+                  Р”Р°, РґР°РІР°Р№С‚Рµ СЂРµР°Р»РёР·СѓРµРј
                 </button>
 
                 {showLeadForm && (
                   <section className="lead-form-wrap fade-slide-in">
-                    <h3>Хотите внедрить это у себя?</h3>
+                    <h3>РҐРѕС‚РёС‚Рµ РІРЅРµРґСЂРёС‚СЊ СЌС‚Рѕ Сѓ СЃРµР±СЏ?</h3>
                     <p>
-                      Оставьте контакты — мы разберём вашу ситуацию и покажем, как собрать понятную систему под ваш
-                      бизнес: сайт, заявки, аналитику и повторные касания.
+                      РћСЃС‚Р°РІСЊС‚Рµ РєРѕРЅС‚Р°РєС‚С‹ вЂ” РјС‹ СЂР°Р·Р±РµСЂС‘Рј РІР°С€Сѓ СЃРёС‚СѓР°С†РёСЋ Рё РїРѕРєР°Р¶РµРј, РєР°Рє СЃРѕР±СЂР°С‚СЊ РїРѕРЅСЏС‚РЅСѓСЋ СЃРёСЃС‚РµРјСѓ РїРѕРґ РІР°С€
+                      Р±РёР·РЅРµСЃ: СЃР°Р№С‚, Р·Р°СЏРІРєРё, Р°РЅР°Р»РёС‚РёРєСѓ Рё РїРѕРІС‚РѕСЂРЅС‹Рµ РєР°СЃР°РЅРёСЏ.
                     </p>
 
                     <form className="lead-form" onSubmit={onLeadSubmit}>
                       <label>
-                        Имя
+                        РРјСЏ
                         <input
                           type="text"
                           value={leadForm.name}
@@ -752,7 +792,7 @@ export default function App() {
                       </label>
 
                       <label>
-                        Контакт (Telegram или Email)
+                        РљРѕРЅС‚Р°РєС‚ (Telegram РёР»Рё Email)
                         <input
                           type="text"
                           value={leadForm.contact}
@@ -762,7 +802,7 @@ export default function App() {
                       </label>
 
                       <label>
-                        Сайт
+                        РЎР°Р№С‚
                         <input
                           type="url"
                           value={leadForm.site}
@@ -772,13 +812,13 @@ export default function App() {
                       </label>
 
                       <button type="submit" className="lead-submit-btn">
-                        {leadSubmitting ? "Отправляем..." : "Отправить"}
+                        {leadSubmitting ? "РћС‚РїСЂР°РІР»СЏРµРј..." : "РћС‚РїСЂР°РІРёС‚СЊ"}
                       </button>
                     </form>
 
                     {leadSubmitError && <p className="lead-error">{leadSubmitError}</p>}
                     {leadSubmitted && (
-                      <p className="lead-success">Спасибо! Мы свяжемся с вами и обсудим реализацию.</p>
+                      <p className="lead-success">РЎРїР°СЃРёР±Рѕ! РњС‹ СЃРІСЏР¶РµРјСЃСЏ СЃ РІР°РјРё Рё РѕР±СЃСѓРґРёРј СЂРµР°Р»РёР·Р°С†РёСЋ.</p>
                     )}
                   </section>
                 )}

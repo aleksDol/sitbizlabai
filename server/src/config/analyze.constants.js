@@ -1,4 +1,4 @@
-﻿export const REQUEST_TIMEOUT_MS = 10000;
+﻿export const REQUEST_TIMEOUT_MS = 15000;
 export const PAGESPEED_TIMEOUT_MS = 20000;
 export const OPENAI_TIMEOUT_MS = 20000;
 export const MAX_TEXT_LENGTH = 5000;

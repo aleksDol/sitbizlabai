@@ -1,4 +1,4 @@
-export function getFriendlyErrorMessage(error) {
+﻿export function getFriendlyErrorMessage(error) {
   const apiError = error?.response?.data?.error;
 
   if (apiError?.message) {
@@ -6,7 +6,7 @@ export function getFriendlyErrorMessage(error) {
   }
 
   if (error?.response?.status === 504) {
-    return "Сайт отвечает слишком долго. Попробуйте снова.";
+    return "Сайт отвечает слишком долго. Мы уже попробовали повторно автоматически, но ответа не получили. Попробуйте снова.";
   }
 
   if (error?.response?.status === 502) {

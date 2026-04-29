@@ -1,4 +1,4 @@
-import axios from "axios";
+﻿import axios from "axios";
 import * as cheerio from "cheerio";
 import {
   MAX_TEXT_LENGTH,
@@ -10,6 +10,9 @@ import { HttpError } from "../utils/http-error.js";
 import { normalizeText, toArrayWithFallback } from "../utils/text.utils.js";
 import { detectPlatform } from "./platform-detector.service.js";
 
+const SITE_FETCH_RETRY_ATTEMPTS = 2;
+const SITE_FETCH_RETRY_DELAY_MS = 450;
+
 function extractMainText($) {
   const cloned = $("body").clone();
   cloned.find("script, style, noscript").remove();
@@ -17,30 +20,50 @@ function extractMainText($) {
   return rawText.slice(0, MAX_TEXT_LENGTH);
 }
 
+function isRetryableSiteError(error) {
+  return ["ECONNABORTED", "ETIMEDOUT", "ECONNRESET"].includes(error?.code);
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function fetchHtml(url) {
-  try {
-    const response = await axios.get(url, {
-      timeout: REQUEST_TIMEOUT_MS,
-      maxRedirects: 5,
-      headers: { "User-Agent": SITE_FETCH_USER_AGENT }
-    });
+  let lastError = null;
 
-    if (typeof response.data !== "string" || response.data.trim() === "") {
-      throw new HttpError(502, ERROR_CODES.SITE_UNAVAILABLE, ERROR_MESSAGES.SITE_EMPTY_CONTENT);
+  for (let attempt = 1; attempt <= SITE_FETCH_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await axios.get(url, {
+        timeout: REQUEST_TIMEOUT_MS,
+        maxRedirects: 5,
+        headers: { "User-Agent": SITE_FETCH_USER_AGENT }
+      });
+
+      if (typeof response.data !== "string" || response.data.trim() === "") {
+        throw new HttpError(502, ERROR_CODES.SITE_UNAVAILABLE, ERROR_MESSAGES.SITE_EMPTY_CONTENT);
+      }
+
+      return response.data;
+    } catch (error) {
+      if (error instanceof HttpError) {
+        throw error;
+      }
+
+      lastError = error;
+      if (attempt < SITE_FETCH_RETRY_ATTEMPTS && isRetryableSiteError(error)) {
+        await wait(SITE_FETCH_RETRY_DELAY_MS * attempt);
+        continue;
+      }
+
+      break;
     }
-
-    return response.data;
-  } catch (error) {
-    if (error instanceof HttpError) {
-      throw error;
-    }
-
-    if (error.code === "ECONNABORTED") {
-      throw new HttpError(504, ERROR_CODES.SITE_TIMEOUT, ERROR_MESSAGES.SITE_TIMEOUT);
-    }
-
-    throw new HttpError(502, ERROR_CODES.SITE_UNAVAILABLE, ERROR_MESSAGES.SITE_UNAVAILABLE);
   }
+
+  if (lastError?.code === "ECONNABORTED") {
+    throw new HttpError(504, ERROR_CODES.SITE_TIMEOUT, ERROR_MESSAGES.SITE_TIMEOUT);
+  }
+
+  throw new HttpError(502, ERROR_CODES.SITE_UNAVAILABLE, ERROR_MESSAGES.SITE_UNAVAILABLE);
 }
 
 export async function parseWebsite(urlObject) {

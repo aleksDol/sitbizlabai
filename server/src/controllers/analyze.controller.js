@@ -122,15 +122,6 @@ export async function implementationPlanController(req, res) {
     });
   }
 
-  if (typeof siteType !== "string" || !siteType.trim()) {
-    return res.status(400).json({
-      error: {
-        code: ERROR_CODES.INVALID_BODY,
-        message: "Передайте корректный siteType."
-      }
-    });
-  }
-
   const normalizedHasWebsite = typeof hasWebsite === "boolean" ? hasWebsite : true;
   const normalizedChannels = Array.isArray(channels)
     ? channels.filter((item) => typeof item === "string")
@@ -143,7 +134,7 @@ export async function implementationPlanController(req, res) {
     const planText = await fetchImplementationPlanFromContext({
       analysisText: analysisText.trim(),
       lossesText: lossesText.trim(),
-      siteType,
+      siteType: typeof siteType === "string" && siteType.trim() ? siteType.trim() : "unknown",
       niche: normalizedNiche,
       hasWebsite: normalizedHasWebsite,
       channels: normalizedChannels,
@@ -197,8 +188,11 @@ export async function solutionOfferController(req, res) {
     const normalizedWebsiteUrl = typeof websiteUrl === "string" && websiteUrl.trim() ? websiteUrl.trim() : null;
     const normalizedDetectedPlatform =
       detectedPlatform && typeof detectedPlatform === "object" ? detectedPlatform : null;
-    const normalizedSiteType =
-      typeof siteType === "string" && siteType.trim() ? siteType.trim() : "unknown";
+    const normalizedSiteType = normalizedHasWebsite
+      ? typeof siteType === "string" && siteType.trim()
+        ? siteType.trim()
+        : "unknown"
+      : "unknown";
     const normalizedLeadsPerMonth = typeof leadsPerMonth === "string" ? leadsPerMonth : "";
     const normalizedHasRepeatSales =
       hasRepeatSales === true
