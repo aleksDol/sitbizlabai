@@ -255,6 +255,7 @@ export default function App() {
   const [solutionStatus, setSolutionStatus] = useState("idle");
   const [solutionOfferText, setSolutionOfferText] = useState("");
   const [solutionPlanCards, setSolutionPlanCards] = useState([]);
+  const [isSolutionTypingDone, setIsSolutionTypingDone] = useState(false);
   const [planCardsVisible, setPlanCardsVisible] = useState(false);
   const [solutionError, setSolutionError] = useState("");
 
@@ -281,21 +282,17 @@ export default function App() {
   const fullAnalysis = useMemo(() => result?.analysis || FALLBACK_ANALYSIS_TEXT, [result]);
   const { typedText, isTyping } = useTypewriter(fullAnalysis, Boolean(result) && status === "success");
   const analysisCards = useMemo(() => splitAnalysisIntoCards(typedText), [typedText]);
-  const {
-    typedText: typedSolutionText,
-    isTyping: isTypingSolution
-  } = useTypewriter(
+  const solutionTextForTypewriter =
     Array.isArray(solutionPlanCards) && solutionPlanCards.length > 0
       ? stripImplementationSection(solutionOfferText)
-      : solutionOfferText,
-    solutionStatus === "success"
-  );
+      : solutionOfferText;
+  const hasStructuredPlanCards = Array.isArray(solutionPlanCards) && solutionPlanCards.length > 0;
   const parsedImplementationCards = useMemo(
     () =>
-      Array.isArray(solutionPlanCards) && solutionPlanCards.length > 0
+      hasStructuredPlanCards
         ? { beforeBlocks: [], cards: solutionPlanCards, afterBlocks: [] }
         : parseImplementationCards(solutionOfferText),
-    [solutionOfferText, solutionPlanCards]
+    [hasStructuredPlanCards, solutionOfferText, solutionPlanCards]
   );
 
   function resetFinalStages() {
@@ -305,6 +302,7 @@ export default function App() {
     setSolutionStatus("idle");
     setSolutionOfferText("");
     setSolutionPlanCards([]);
+    setIsSolutionTypingDone(false);
     setPlanCardsVisible(false);
     setSolutionError("");
 
@@ -329,15 +327,16 @@ export default function App() {
   useEffect(() => {
     if (solutionStatus !== "success" || !parsedImplementationCards) {
       setPlanCardsVisible(false);
-      return undefined;
+      return;
     }
 
-    const timer = setTimeout(() => {
+    if (!hasStructuredPlanCards) {
       setPlanCardsVisible(true);
-    }, 600);
+      return;
+    }
 
-    return () => clearTimeout(timer);
-  }, [solutionStatus, parsedImplementationCards]);
+    setPlanCardsVisible(isSolutionTypingDone);
+  }, [solutionStatus, parsedImplementationCards, hasStructuredPlanCards, isSolutionTypingDone]);
 
   function buildAnalysisInput() {
     if (!quizAnswers || typeof quizAnswers.hasWebsite !== "boolean") {
@@ -465,6 +464,7 @@ export default function App() {
     setSolutionStatus("loading");
     setSolutionOfferText("");
     setSolutionPlanCards([]);
+    setIsSolutionTypingDone(false);
     setSolutionError("");
     setShowLeadForm(false);
     setLeadSubmitted(false);
@@ -679,10 +679,12 @@ export default function App() {
             {solutionStatus === "success" && (
               <article className="result-card solution-card">
                 <h2>🚀 План реализации</h2>
-                <>
-                  <p className="structured-text">{typedSolutionText}</p>
-                  {isTypingSolution && <span className="typing-cursor">|</span>}
-                </>
+                <TypewriterText
+                  text={solutionTextForTypewriter}
+                  enabled={solutionStatus === "success"}
+                  className="structured-text"
+                  onComplete={() => setIsSolutionTypingDone(true)}
+                />
                 {parsedImplementationCards ? (
                   <div
                     className={`plan-cards-layout ${planCardsVisible ? "plan-cards-reveal" : "plan-cards-hidden"}`}
