@@ -1,7 +1,16 @@
 ﻿import { useTypewriter } from "../../hooks/use-typewriter";
 
-export function TypewriterText({ text, enabled, className = "" }) {
-  const { typedText, isTyping } = useTypewriter(text, enabled);
+function stripMarkdownLikeSyntax(text) {
+  return (text || "")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^\s*[-*]\s+/gm, "• ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export function TypewriterText({ text, enabled, className = "", sanitizeMarkdown = false }) {
+  const preparedText = sanitizeMarkdown ? stripMarkdownLikeSyntax(text) : text;
+  const { typedText, isTyping } = useTypewriter(preparedText, enabled);
 
   return (
     <>

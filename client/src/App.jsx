@@ -566,7 +566,12 @@ export default function App() {
             {solutionStatus === "success" && (
               <article className="result-card solution-card">
                 <h2>🚀 План реализации</h2>
-                <TypewriterText text={solutionOfferText} enabled={solutionStatus === "success"} className="structured-text" />
+                <TypewriterText
+                  text={solutionOfferText}
+                  enabled={solutionStatus === "success"}
+                  className="structured-text"
+                  sanitizeMarkdown
+                />
 
                 <button type="button" className="implement-cta" onClick={onOpenLeadForm}>
                   Да, давайте реализуем
