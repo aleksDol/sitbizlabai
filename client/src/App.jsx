@@ -160,6 +160,29 @@ function parseImplementationCards(rawText) {
   };
 }
 
+function stripImplementationSection(rawText) {
+  const text = (rawText || "").trim();
+  if (!text) return "";
+
+  const startMatch = text.match(/\u{1F680}\s*Что стоит внедрить/i);
+  if (!startMatch || startMatch.index === undefined) {
+    return text;
+  }
+
+  const start = startMatch.index;
+  const tail = text.slice(start);
+  const nextHeader = tail.match(/\n(?:\u{1F4C8}\s*Если коротко|\u{1F6E0}\s*Что мы можем сделать для вас|\u{1F449}\s*Финал:|\u{1F4A1}\s*Хотите внедрить)/iu);
+  const end = nextHeader ? start + nextHeader.index : text.length;
+
+  return `${text.slice(0, start).trim()}\n\n${text.slice(end).trim()}`.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function mapPriorityLabel(priority) {
+  if (priority === "critical") return "🔥 critical";
+  if (priority === "optional") return "➕ optional";
+  return "⚡ important";
+}
+
 function trackLeadFormSubmitted(payload = {}) {
   if (typeof window === "undefined") {
     return;
@@ -260,7 +283,12 @@ export default function App() {
   const {
     typedText: typedSolutionText,
     isTyping: isTypingSolution
-  } = useTypewriter(solutionOfferText, solutionStatus === "success");
+  } = useTypewriter(
+    Array.isArray(solutionPlanCards) && solutionPlanCards.length > 0
+      ? stripImplementationSection(solutionOfferText)
+      : solutionOfferText,
+    solutionStatus === "success"
+  );
   const parsedImplementationCards = useMemo(
     () =>
       Array.isArray(solutionPlanCards) && solutionPlanCards.length > 0
@@ -641,7 +669,7 @@ export default function App() {
                     <span className="typing-cursor">|</span>
                   </>
                 ) : parsedImplementationCards ? (
-                  <div className="plan-cards-layout">
+                  <div className="plan-cards-layout plan-cards-reveal">
                     {parsedImplementationCards.beforeBlocks.map((block) => (
                       <p key={`before-${block}`} className="structured-text">
                         {block}
@@ -652,6 +680,7 @@ export default function App() {
                       <h3>🚀 Что стоит внедрить</h3>
                       {parsedImplementationCards.cards.map((card, index) => (
                         <div key={`${card.problem}-${index}`} className="plan-card">
+                          <div className="plan-card-priority">{mapPriorityLabel(card.priority)}</div>
                           <div className="card-problem">
                             🔴 Проблема
                             <br />

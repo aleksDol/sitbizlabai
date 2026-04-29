@@ -38,10 +38,14 @@ function normalizePlanCards(rawCards) {
       const problem = typeof item?.problem === "string" ? item.problem.trim() : "";
       const solution = typeof item?.solution === "string" ? item.solution.trim() : "";
       const result = typeof item?.result === "string" ? item.result.trim() : "";
+      const priorityRaw = typeof item?.priority === "string" ? item.priority.trim().toLowerCase() : "";
+      const priority = ["critical", "important", "optional"].includes(priorityRaw)
+        ? priorityRaw
+        : "important";
       if (!problem || !solution || !result) {
         return null;
       }
-      return { problem, solution, result };
+      return { problem, solution, result, priority };
     })
     .filter(Boolean);
 }
@@ -353,7 +357,7 @@ export async function fetchSolutionOfferFromContext({
       {
         role: "system",
         content:
-          "Не используй markdown: не пиши ###, ##, #, не используй markdown-заголовки и символы разметки. Ответ должен состоять из 2 частей в одном валидном JSON-объекте: поле solutionOfferText (живой текст плана с эмодзи и CTA) и поле planCards (массив 3-5 карточек вида {problem, solution, result}). Сначала сформируй текст solutionOfferText, затем заполни planCards как краткую версию этого текста. Не рекомендовать сторонние платформы. Формулировки должны быть из контекста. Каждая карточка — вывод из анализа. В блоке 'Что мы можем сделать для вас' используй только релевантные пункты: лендинг/сайт, Telegram-бот при необходимости, CRM/админка и аналитика при нескольких источниках/потере заявок, связка в единую систему заявок и повторных касаний."
+          "Не используй markdown: не пиши ###, ##, #, не используй markdown-заголовки и символы разметки. Ответ должен состоять из 2 частей в одном валидном JSON-объекте: поле solutionOfferText (живой текст плана с эмодзи и CTA) и поле planCards (массив 3-5 карточек вида {problem, solution, result, priority}). Сначала сформируй текст solutionOfferText, затем заполни planCards как краткую версию этого текста. planCards — основной формат блока внедрения, поэтому solutionOfferText не должен дублировать секцию 'Что стоит внедрить'. Не рекомендовать сторонние платформы. Формулировки должны быть из контекста. Каждая карточка — вывод из анализа. Для result обязательно формат: результат + краткое объяснение почему (1-2 строки). priority только из: critical, important, optional. В блоке 'Что мы можем сделать для вас' используй только релевантные пункты: лендинг/сайт, Telegram-бот при необходимости, CRM/админка и аналитика при нескольких источниках/потере заявок, связка в единую систему заявок и повторных касаний."
       },
       {
         role: "user",
