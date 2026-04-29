@@ -255,6 +255,7 @@ export default function App() {
   const [solutionStatus, setSolutionStatus] = useState("idle");
   const [solutionOfferText, setSolutionOfferText] = useState("");
   const [solutionPlanCards, setSolutionPlanCards] = useState([]);
+  const [planCardsVisible, setPlanCardsVisible] = useState(false);
   const [solutionError, setSolutionError] = useState("");
 
   const [showLeadForm, setShowLeadForm] = useState(false);
@@ -304,6 +305,7 @@ export default function App() {
     setSolutionStatus("idle");
     setSolutionOfferText("");
     setSolutionPlanCards([]);
+    setPlanCardsVisible(false);
     setSolutionError("");
 
     setShowLeadForm(false);
@@ -323,6 +325,19 @@ export default function App() {
 
     return () => clearInterval(timer);
   }, [solutionStatus]);
+
+  useEffect(() => {
+    if (solutionStatus !== "success" || !parsedImplementationCards) {
+      setPlanCardsVisible(false);
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      setPlanCardsVisible(true);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [solutionStatus, parsedImplementationCards]);
 
   function buildAnalysisInput() {
     if (!quizAnswers || typeof quizAnswers.hasWebsite !== "boolean") {
@@ -663,13 +678,14 @@ export default function App() {
             {solutionStatus === "success" && (
               <article className="result-card solution-card">
                 <h2>🚀 План реализации</h2>
-                {isTypingSolution ? (
-                  <>
-                    <p className="structured-text">{typedSolutionText}</p>
-                    <span className="typing-cursor">|</span>
-                  </>
-                ) : parsedImplementationCards ? (
-                  <div className="plan-cards-layout plan-cards-reveal">
+                <>
+                  <p className="structured-text">{typedSolutionText}</p>
+                  {isTypingSolution && <span className="typing-cursor">|</span>}
+                </>
+                {parsedImplementationCards ? (
+                  <div
+                    className={`plan-cards-layout ${planCardsVisible ? "plan-cards-reveal" : "plan-cards-hidden"}`}
+                  >
                     {parsedImplementationCards.beforeBlocks.map((block) => (
                       <p key={`before-${block}`} className="structured-text">
                         {block}
@@ -679,7 +695,11 @@ export default function App() {
                     <section className="plan-cards-section">
                       <h3>🚀 Что стоит внедрить</h3>
                       {parsedImplementationCards.cards.map((card, index) => (
-                        <div key={`${card.problem}-${index}`} className="plan-card">
+                        <div
+                          key={`${card.problem}-${index}`}
+                          className="plan-card"
+                          style={{ animationDelay: `${index * 0.14}s` }}
+                        >
                           <div className="plan-card-priority">{mapPriorityLabel(card.priority)}</div>
                           <div className="card-problem">
                             🔴 Проблема
@@ -706,14 +726,7 @@ export default function App() {
                       </p>
                     ))}
                   </div>
-                ) : (
-                  <TypewriterText
-                    text={solutionOfferText}
-                    enabled={solutionStatus === "success"}
-                    className="structured-text"
-                    sanitizeMarkdown
-                  />
-                )}
+                ) : null}
 
                 <button type="button" className="implement-cta" onClick={onOpenLeadForm}>
                   Да, давайте реализуем
