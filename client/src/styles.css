@@ -83,10 +83,29 @@ body {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
+.quiz-input-hint {
+  margin: 10px 0 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .quiz-options-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.quiz-checkbox-list {
+  display: grid;
+  gap: 8px;
+}
+
+.quiz-checkbox-list .quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
 .quiz-option,

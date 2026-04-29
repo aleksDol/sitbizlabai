@@ -13,11 +13,10 @@ export async function analyzeSite(urlObject, analysisInput = null) {
     ...parsedData,
     businessContext: analysisInput
       ? {
-          niche: analysisInput.niche || "",
+          niche: analysisInput.niche || null,
           hasWebsite: analysisInput.hasWebsite === true,
           channels: Array.isArray(analysisInput.channels) ? analysisInput.channels : [],
-          hasRepeatSales: analysisInput.hasRepeatSales || "",
-          leadsPerMonth: analysisInput.leadsPerMonth || ""
+          hasRepeatSales: analysisInput.hasRepeatSales || "unknown"
         }
       : null,
     performance_score: pageSpeedResult.metrics.performance_score,

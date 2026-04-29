@@ -5,7 +5,7 @@ import { PostContent } from "@/components/PostContent";
 import { prisma } from "@/lib/prisma";
 import styles from "./page.module.css";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type PageProps = {
   params: Promise<{ slug: string }> | { slug: string };
@@ -60,8 +60,16 @@ async function getPublishedPostBySlug(slug: string) {
       telegramUrl: true,
       productUrl: true,
       publishedAt: true,
+      updatedAt: true,
       createdAt: true,
     },
+  });
+}
+
+async function getPublishedSlugs() {
+  return prisma.post.findMany({
+    where: { status: PostStatus.PUBLISHED },
+    select: { slug: true },
   });
 }
 
@@ -114,6 +122,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: canonical,
       title,
       description,
+      publishedTime: (post.publishedAt ?? post.createdAt).toISOString(),
+      modifiedTime: (post.updatedAt ?? post.publishedAt ?? post.createdAt).toISOString(),
       images: post.coverImageUrl ? [{ url: post.coverImageUrl, alt: post.title }] : undefined,
     },
     twitter: {
@@ -125,17 +135,87 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
+export async function generateStaticParams() {
+  try {
+    const posts = await getPublishedSlugs();
+    return posts.map((post) => ({ slug: post.slug }));
+  } catch {
+    return [];
+  }
+}
+
 export default async function BlogPostPage({ params }: PageProps) {
   const resolvedParams = await Promise.resolve(params);
   const slug = decodeSlugParam(resolvedParams.slug);
   const post = await getPublishedPostBySlug(slug);
+  const siteUrl = getSiteUrl();
 
   if (!post) {
     notFound();
   }
 
+  const canonical = `${siteUrl}/blog/${post.slug}`;
+  const description = makeDescription({
+    seoDescription: post.seoDescription,
+    excerpt: post.excerpt,
+    content: post.content,
+  });
+  const headline = post.seoTitle?.trim() || post.title;
+
   return (
     <main className={styles.page}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            headline,
+            description,
+            image: post.coverImageUrl ? [post.coverImageUrl] : undefined,
+            datePublished: (post.publishedAt ?? post.createdAt).toISOString(),
+            dateModified: (post.updatedAt ?? post.publishedAt ?? post.createdAt).toISOString(),
+            mainEntityOfPage: {
+              "@type": "WebPage",
+              "@id": canonical,
+            },
+            publisher: {
+              "@type": "Organization",
+              name: "SiteBizAI",
+              url: siteUrl,
+            },
+          }),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Главная",
+                item: `${siteUrl}/`,
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: "Блог",
+                item: `${siteUrl}/blog`,
+              },
+              {
+                "@type": "ListItem",
+                position: 3,
+                name: post.title,
+                item: canonical,
+              },
+            ],
+          }),
+        }}
+      />
       <PostContent
         title={post.title}
         coverImageUrl={post.coverImageUrl}

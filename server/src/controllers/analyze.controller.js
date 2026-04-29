@@ -56,12 +56,14 @@ export async function lossesController(req, res, next) {
     const analysisInput =
       inputPayload && typeof inputPayload === "object"
         ? {
+            niche: typeof inputPayload.niche === "string" ? inputPayload.niche.trim() : null,
+            websiteUrl: typeof inputPayload.websiteUrl === "string" ? inputPayload.websiteUrl.trim() : null,
             hasWebsite: inputPayload.hasWebsite === true,
             channels: Array.isArray(inputPayload.channels)
               ? inputPayload.channels.filter((item) => typeof item === "string")
               : [],
             hasRepeatSales:
-              typeof inputPayload.hasRepeatSales === "string" ? inputPayload.hasRepeatSales : ""
+              typeof inputPayload.hasRepeatSales === "string" ? inputPayload.hasRepeatSales : "unknown"
           }
         : null;
 

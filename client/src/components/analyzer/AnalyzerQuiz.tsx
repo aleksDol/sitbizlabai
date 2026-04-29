@@ -3,33 +3,56 @@ import { reachMetrikaGoal } from "../../utils/metrika";
 
 const ACQUISITION_CHANNELS = [
   "Telegram",
-  "YouTube",
-  "Сарафанное радио",
+  "Instagram / соцсети",
+  "Сайт",
   "Реклама",
-  "Соцсети",
-  "Рассылки"
+  "Сарафанное радио",
+  "Рассылки",
+  "Другое"
 ];
 
-const LEADS_PER_MONTH = ["0–5", "5–20", "20–50", "50+"];
 const REPEAT_SALES_OPTIONS = ["Да", "Нет", "Не знаю"];
+
+function parseBusinessOrSite(rawValue) {
+  const value = rawValue.trim();
+  if (!value) {
+    return { hasWebsite: false, websiteUrl: null, niche: null };
+  }
+
+  try {
+    const parsed = new URL(value);
+    if (["http:", "https:"].includes(parsed.protocol)) {
+      return { hasWebsite: true, websiteUrl: parsed.href, niche: null };
+    }
+  } catch {
+    // Not a full URL, try plain domain below.
+  }
+
+  const looksLikeDomain = !/\s/.test(value) && value.includes(".");
+  if (looksLikeDomain) {
+    try {
+      const parsed = new URL(`https://${value}`);
+      return { hasWebsite: true, websiteUrl: parsed.href, niche: null };
+    } catch {
+      // Fall back to niche text.
+    }
+  }
+
+  return { hasWebsite: false, websiteUrl: null, niche: value };
+}
 
 export function AnalyzerQuiz({ onComplete }) {
   const [step, setStep] = useState(1);
-  const [businessType, setBusinessType] = useState("");
-  const [websiteUrl, setWebsiteUrl] = useState("");
-  const [hasWebsite, setHasWebsite] = useState(true);
+  const [businessOrSite, setBusinessOrSite] = useState("");
   const [channels, setChannels] = useState([]);
   const [repeatSales, setRepeatSales] = useState("");
-  const [leadsPerMonth, setLeadsPerMonth] = useState("");
 
   const canProceed = useMemo(() => {
-    if (step === 1) return businessType.trim().length > 1;
-    if (step === 2) return !hasWebsite || websiteUrl.trim().length > 0;
-    if (step === 3) return channels.length > 0;
-    if (step === 4) return Boolean(repeatSales);
-    if (step === 5) return Boolean(leadsPerMonth);
+    if (step === 1) return businessOrSite.trim().length > 1;
+    if (step === 2) return channels.length > 0;
+    if (step === 3) return Boolean(repeatSales);
     return false;
-  }, [step, businessType, hasWebsite, websiteUrl, channels, repeatSales, leadsPerMonth]);
+  }, [step, businessOrSite, channels, repeatSales]);
 
   function onToggleChannel(channel) {
     setChannels((prev) =>
@@ -39,35 +62,30 @@ export function AnalyzerQuiz({ onComplete }) {
 
   function onNext() {
     if (!canProceed) return;
-    setStep((prev) => Math.min(prev + 1, 5));
+    setStep((prev) => Math.min(prev + 1, 3));
   }
 
   function onBack() {
     setStep((prev) => Math.max(prev - 1, 1));
   }
 
-  function onNoWebsite() {
-    setHasWebsite(false);
-    setWebsiteUrl("");
-    setStep((prev) => Math.min(prev + 1, 5));
-  }
-
-  function onWebsiteUrlChange(value) {
-    setHasWebsite(true);
-    setWebsiteUrl(value);
-  }
-
   function onFinish() {
     if (!canProceed) return;
+
+    const parsedInput = parseBusinessOrSite(businessOrSite);
+    const repeatSalesMap = {
+      Да: "yes",
+      Нет: "no",
+      "Не знаю": "unknown"
+    };
 
     try {
       window.dispatchEvent(
         new CustomEvent("sitebizai_quiz_go_to_analysis_click", {
           detail: {
-            hasWebsite,
+            hasWebsite: parsedInput.hasWebsite,
             channelsCount: channels.length,
-            repeatSales,
-            leadsPerMonth
+            hasRepeatSales: repeatSalesMap[repeatSales] || "unknown"
           }
         })
       );
@@ -77,67 +95,54 @@ export function AnalyzerQuiz({ onComplete }) {
     reachMetrikaGoal("quiz_go_to_analysis_click");
 
     onComplete({
-      businessType: businessType.trim(),
-      hasWebsite,
-      websiteUrl: hasWebsite ? websiteUrl.trim() : "",
+      niche: parsedInput.niche,
+      hasWebsite: parsedInput.hasWebsite,
+      websiteUrl: parsedInput.websiteUrl,
       acquisitionChannels: channels,
-      repeatSales,
-      leadsPerMonth
+      hasRepeatSales: repeatSalesMap[repeatSales] || "unknown"
     });
   }
 
   return (
     <section className="quiz-card fade-in delay-1">
-      <div className="quiz-progress">Шаг {step} из 5</div>
+      <div className="quiz-progress">Шаг {step} из 3</div>
 
       <div key={step} className="quiz-step fade-slide-in">
         {step === 1 && (
           <>
-            <h2>Чем занимается ваш бизнес?</h2>
+            <h2>Вставьте сайт или опишите ваш бизнес</h2>
             <input
               type="text"
-              value={businessType}
-              onChange={(event) => setBusinessType(event.target.value)}
-              placeholder="Например: студия дизайна интерьеров"
+              value={businessOrSite}
+              onChange={(event) => setBusinessOrSite(event.target.value)}
+              placeholder="https://site.ru или опишите ваш бизнес, если сайта нет"
             />
+            <p className="quiz-input-hint">
+              Если вставите сайт - мы автоматически проанализируем его. Если сайта нет - подскажем,
+              как выстроить воронку продаж.
+            </p>
           </>
         )}
 
         {step === 2 && (
           <>
-            <h2>Есть ли у вас сайт?</h2>
-            <input
-              type="url"
-              value={websiteUrl}
-              onChange={(event) => onWebsiteUrlChange(event.target.value)}
-              placeholder="https://example.com"
-              disabled={!hasWebsite}
-            />
-            <button type="button" className="quiz-ghost-btn" onClick={onNoWebsite}>
-              Нет сайта
-            </button>
-          </>
-        )}
-
-        {step === 3 && (
-          <>
             <h2>Как сейчас привлекаете клиентов?</h2>
-            <div className="quiz-options-grid">
+            <div className="quiz-checkbox-list">
               {ACQUISITION_CHANNELS.map((channel) => (
-                <button
-                  key={channel}
-                  type="button"
-                  className={`quiz-option ${channels.includes(channel) ? "selected" : ""}`}
-                  onClick={() => onToggleChannel(channel)}
-                >
+                <label key={channel} className={`quiz-option ${channels.includes(channel) ? "selected" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={channels.includes(channel)}
+                    onChange={() => onToggleChannel(channel)}
+                  />
                   {channel}
-                </button>
+                </label>
               ))}
             </div>
           </>
         )}
 
-        {step === 4 && (
+        {step === 3 && (
           <>
             <h2>Есть ли повторные продажи?</h2>
             <div className="quiz-options-grid">
@@ -154,34 +159,18 @@ export function AnalyzerQuiz({ onComplete }) {
             </div>
           </>
         )}
-
-        {step === 5 && (
-          <>
-            <h2>Сколько заявок в месяц?</h2>
-            <div className="quiz-options-grid">
-              {LEADS_PER_MONTH.map((range) => (
-                <button
-                  key={range}
-                  type="button"
-                  className={`quiz-option ${leadsPerMonth === range ? "selected" : ""}`}
-                  onClick={() => setLeadsPerMonth(range)}
-                >
-                  {range}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
       </div>
 
       <div className="quiz-actions">
-        {step > 1 && (
-          <button type="button" className="quiz-ghost-btn" onClick={onBack}>
-            Назад
-          </button>
-        )}
+        <div>
+          {step > 1 && (
+            <button type="button" className="quiz-ghost-btn" onClick={onBack}>
+              Назад
+            </button>
+          )}
+        </div>
 
-        {step < 5 ? (
+        {step < 3 ? (
           <button type="button" className="quiz-primary-btn" disabled={!canProceed} onClick={onNext}>
             Далее
           </button>

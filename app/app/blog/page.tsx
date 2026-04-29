@@ -1,9 +1,40 @@
+import type { Metadata } from "next";
 import { PostStatus } from "@prisma/client";
 import { PostCard } from "@/components/PostCard";
 import { prisma } from "@/lib/prisma";
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
+
+function getSiteUrl(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000";
+}
+
+const BLOG_TITLE = "Блог SiteBizAI";
+const BLOG_DESCRIPTION = "Разборы сайтов, SEO, UX и конверсии: практические советы и кейсы для роста заявок.";
+
+export function generateMetadata(): Metadata {
+  const siteUrl = getSiteUrl();
+  const canonical = `${siteUrl}/blog`;
+
+  return {
+    title: BLOG_TITLE,
+    description: BLOG_DESCRIPTION,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      url: canonical,
+      title: BLOG_TITLE,
+      description: BLOG_DESCRIPTION,
+      siteName: "SiteBizAI",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: BLOG_TITLE,
+      description: BLOG_DESCRIPTION,
+    },
+  };
+}
 
 async function getPublishedPosts() {
   return prisma.post.findMany({

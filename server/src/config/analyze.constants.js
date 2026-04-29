@@ -1,4 +1,4 @@
-export const REQUEST_TIMEOUT_MS = 10000;
+﻿export const REQUEST_TIMEOUT_MS = 10000;
 export const PAGESPEED_TIMEOUT_MS = 20000;
 export const OPENAI_TIMEOUT_MS = 20000;
 export const MAX_TEXT_LENGTH = 5000;
@@ -9,7 +9,7 @@ export const DEFAULT_OPENAI_BASE_URL = "https://api.proxyapi.ru/openai/v1";
 
 export const SITE_FETCH_USER_AGENT = "SiteBizAI/1.0 (+website-analyzer)";
 
-export const OPENAI_ANALYSIS_FALLBACK = "Не удалось провести анализ";
+export const OPENAI_ANALYSIS_FALLBACK = "Не удалось провести анализ.";
 export const OPENAI_WARNING_MESSAGE =
   "Не удалось получить рекомендации AI. Базовый анализ сайта сохранен.";
 export const PAGESPEED_WARNING_MESSAGE =

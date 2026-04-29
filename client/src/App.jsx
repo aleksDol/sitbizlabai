@@ -160,8 +160,43 @@ function trackLeadFormSubmitted(payload = {}) {
   reachMetrikaGoal("lead_form_submitted");
 }
 
+function trackLossesCtaClicked(payload = {}) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent("sitebizai_losses_cta_click", {
+        detail: payload
+      })
+    );
+  } catch {
+    // Silent: tracking should never break the main flow.
+  }
+
+  reachMetrikaGoal("losses_cta_click");
+}
+
+function trackPlanCtaClicked(payload = {}) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent("sitebizai_plan_cta_click", {
+        detail: payload
+      })
+    );
+  } catch {
+    // Silent: tracking should never break the main flow.
+  }
+
+  reachMetrikaGoal("plan_cta_click");
+}
+
 export default function App() {
-  const [url, setUrl] = useState("");
   const [quizAnswers, setQuizAnswers] = useState(null);
   const [isQuizCompleted, setIsQuizCompleted] = useState(false);
   const [status, setStatus] = useState("idle");
@@ -228,21 +263,20 @@ export default function App() {
   }
 
   function buildAnalysisInput() {
-    if (!quizAnswers) {
+    if (!quizAnswers || typeof quizAnswers.hasWebsite !== "boolean") {
       return null;
     }
 
     return {
-      niche: quizAnswers.businessType || "",
-      websiteUrl: quizAnswers.websiteUrl || "",
-      hasWebsite: Boolean(quizAnswers.hasWebsite),
+      niche: quizAnswers.hasWebsite ? null : quizAnswers.niche || null,
+      websiteUrl: quizAnswers.hasWebsite ? quizAnswers.websiteUrl || null : null,
+      hasWebsite: quizAnswers.hasWebsite,
       channels: Array.isArray(quizAnswers.acquisitionChannels) ? quizAnswers.acquisitionChannels : [],
-      hasRepeatSales: quizAnswers.repeatSales || "",
-      leadsPerMonth: quizAnswers.leadsPerMonth || ""
+      hasRepeatSales: quizAnswers.hasRepeatSales || "unknown"
     };
   }
 
-  async function runAnalysis() {
+  async function runAnalysis(analysisInputOverride = null) {
     setError("");
     setResult(null);
     setWarnings([]);
@@ -255,18 +289,12 @@ export default function App() {
     resetFinalStages();
 
     try {
-      const analysisInput = buildAnalysisInput();
-      const shouldAnalyzeByWebsite = analysisInput?.hasWebsite && url.trim();
+      const analysisInput = analysisInputOverride || buildAnalysisInput();
+      const shouldAnalyzeByWebsite = analysisInput?.hasWebsite && analysisInput?.websiteUrl;
 
       const request = shouldAnalyzeByWebsite
-        ? analyzeBusiness({
-            ...analysisInput,
-            websiteUrl: url.trim()
-          })
-        : analyzeBusiness({
-            ...analysisInput,
-            websiteUrl: ""
-          });
+        ? analyzeBusiness(analysisInput)
+        : analyzeBusiness({ ...analysisInput, websiteUrl: null });
 
       const [siteData] = await Promise.all([request, wait(MIN_LOADING_DURATION_MS)]);
       completeProgress();
@@ -280,22 +308,25 @@ export default function App() {
     }
   }
 
-  async function onSubmit(event) {
-    event.preventDefault();
-    await runAnalysis();
-  }
-
   async function onRetry() {
-    if (quizAnswers?.hasWebsite && !url.trim()) {
+    if (quizAnswers?.hasWebsite && !quizAnswers?.websiteUrl) {
       return;
     }
     await runAnalysis();
   }
 
-  function onQuizComplete(answers) {
+  async function onQuizComplete(answers) {
+    const nextAnalysisInput = {
+      niche: answers.hasWebsite ? null : answers.niche || null,
+      websiteUrl: answers.hasWebsite ? answers.websiteUrl || null : null,
+      hasWebsite: Boolean(answers.hasWebsite),
+      channels: Array.isArray(answers.acquisitionChannels) ? answers.acquisitionChannels : [],
+      hasRepeatSales: answers.hasRepeatSales || "unknown"
+    };
+
     setQuizAnswers(answers);
-    setUrl(answers.websiteUrl || "");
     setIsQuizCompleted(true);
+    await runAnalysis(nextAnalysisInput);
   }
 
   async function onEstimateLosses() {
@@ -311,6 +342,12 @@ export default function App() {
     setLossesError("");
     setLossesText("");
     resetFinalStages();
+    trackLossesCtaClicked({
+      hasWebsite: Boolean(quizAnswers?.hasWebsite),
+      channelsCount: Array.isArray(quizAnswers?.acquisitionChannels)
+        ? quizAnswers.acquisitionChannels.length
+        : 0
+    });
 
     try {
       const response = await estimateBusinessLosses(analysisProblems, buildAnalysisInput());
@@ -334,6 +371,10 @@ export default function App() {
     setSolutionError("");
     setShowLeadForm(false);
     setLeadSubmitted(false);
+    trackPlanCtaClicked({
+      hasWebsite: Boolean(quizAnswers?.hasWebsite),
+      lossesReady: Boolean(lossesText?.trim())
+    });
   }
 
   async function requestSolutionOffer(nextAnswers) {
@@ -357,10 +398,10 @@ export default function App() {
         analysisText: fullAnalysis,
         lossesText,
         siteType: siteTypeForRequest,
-        niche: quizAnswers?.businessType || "",
+        niche: quizAnswers?.niche || "",
         hasWebsite,
         channels: Array.isArray(quizAnswers?.acquisitionChannels) ? quizAnswers.acquisitionChannels : [],
-        leadsPerMonth: quizAnswers?.leadsPerMonth || "",
+        leadsPerMonth: "",
         hasRepeatSales: nextAnswers.hasRepeatSales,
         trafficSources: nextAnswers.trafficSources
       });
@@ -412,7 +453,7 @@ export default function App() {
     setLeadSubmitError("");
     setLeadForm((prev) => ({
       ...prev,
-      site: quizAnswers?.hasWebsite ? url : ""
+      site: quizAnswers?.hasWebsite ? quizAnswers?.websiteUrl || "" : ""
     }));
   }
 
@@ -433,11 +474,11 @@ export default function App() {
       await createLead({
         name: leadForm.name?.trim() || "",
         contact: leadForm.contact?.trim() || "",
-        niche: quizAnswers?.businessType?.trim() || null,
+        niche: quizAnswers?.hasWebsite ? null : quizAnswers?.niche?.trim() || null,
         websiteUrl: quizAnswers?.hasWebsite ? leadForm.site?.trim() || null : null,
         hasWebsite: typeof quizAnswers?.hasWebsite === "boolean" ? quizAnswers.hasWebsite : null,
         channels: Array.isArray(quizAnswers?.acquisitionChannels) ? quizAnswers.acquisitionChannels : [],
-        leadsPerMonth: quizAnswers?.leadsPerMonth || null,
+        leadsPerMonth: null,
         detectedPlatform: quizAnswers?.hasWebsite ? result?.detectedPlatform?.platform || null : null,
         analysisText: fullAnalysis?.trim() || null,
         lossesText: lossesText?.trim() || null,
@@ -451,7 +492,7 @@ export default function App() {
       setLeadSubmitted(true);
       trackLeadFormSubmitted({
         hasWebsite: Boolean(quizAnswers?.hasWebsite),
-        niche: quizAnswers?.businessType || "",
+        niche: quizAnswers?.niche || "",
         channelsCount: Array.isArray(quizAnswers?.acquisitionChannels)
           ? quizAnswers.acquisitionChannels.length
           : 0
@@ -480,35 +521,8 @@ export default function App() {
 
         {isQuizCompleted && (
           <section className="quiz-summary fade-slide-in">
-            <p>
-              {quizAnswers?.hasWebsite
-                ? "Контекст сохранён. Проверьте сайт и запустите анализ."
-                : "Контекст сохранён. Запустите анализ по данным бизнеса."}
-            </p>
+            <p>{quizAnswers?.hasWebsite ? "Запускаем анализ сайта..." : "Запускаем анализ бизнеса..."}</p>
           </section>
-        )}
-
-        {isQuizCompleted && quizAnswers?.hasWebsite && (
-          <form onSubmit={onSubmit} className="analyze-form fade-in delay-1">
-            <input
-              type="url"
-              placeholder="https://example.com"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              required
-            />
-            <button type="submit" disabled={status === "loading"}>
-              {status === "loading" ? "Анализируем..." : "Анализировать"}
-            </button>
-          </form>
-        )}
-
-        {isQuizCompleted && !quizAnswers?.hasWebsite && (
-          <div className="analyze-no-site-wrap fade-in delay-1">
-            <button type="button" className="analyze-no-site-btn" onClick={onRetry} disabled={status === "loading"}>
-              {status === "loading" ? "Анализируем..." : "Анализировать без сайта"}
-            </button>
-          </div>
         )}
 
         {status === "loading" && (
