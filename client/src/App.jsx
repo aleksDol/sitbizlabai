@@ -107,6 +107,59 @@ function extractProblemsForLosses(fullAnalysis) {
   return (problemsCard?.body || fullAnalysis || "").trim();
 }
 
+function splitTextBlocks(text) {
+  return (text || "")
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+}
+
+function parseImplementationCards(rawText) {
+  const text = (rawText || "").trim();
+  if (!text) return null;
+
+  const headerMatch = text.match(/🚀\s*Что стоит внедрить/i);
+  if (!headerMatch || headerMatch.index === undefined) return null;
+
+  const sectionStart = headerMatch.index;
+  const tail = text.slice(sectionStart);
+  const nextHeaderMatch = tail.match(/\n(?:📈\s*Если коротко|🛠\s*Что мы можем сделать для вас|👉\s*Финал:|💡\s*Хотите внедрить)/i);
+  const sectionEnd = nextHeaderMatch ? sectionStart + nextHeaderMatch.index : text.length;
+
+  const before = text.slice(0, sectionStart).trim();
+  const section = text.slice(sectionStart, sectionEnd).trim();
+  const after = text.slice(sectionEnd).trim();
+
+  const chunks = section.split(/Проблема:/i).slice(1);
+  if (chunks.length === 0) return null;
+
+  const cards = [];
+  for (const chunk of chunks) {
+    const solutionSplit = chunk.split(/Решение:/i);
+    if (solutionSplit.length < 2) return null;
+
+    const problem = solutionSplit[0].trim();
+    const solutionAndResult = solutionSplit.slice(1).join("Решение:").trim();
+
+    const resultSplit = solutionAndResult.split(/(?:Что получит бизнес|Результат):/i);
+    if (resultSplit.length < 2) return null;
+
+    const solution = resultSplit[0].trim();
+    const result = resultSplit.slice(1).join(" ").trim();
+
+    if (!problem || !solution || !result) return null;
+    cards.push({ problem, solution, result });
+  }
+
+  if (cards.length === 0) return null;
+
+  return {
+    beforeBlocks: splitTextBlocks(before),
+    cards,
+    afterBlocks: splitTextBlocks(after)
+  };
+}
+
 function trackLeadFormSubmitted(payload = {}) {
   if (typeof window === "undefined") {
     return;
@@ -178,6 +231,7 @@ export default function App() {
 
   const [solutionStatus, setSolutionStatus] = useState("idle");
   const [solutionOfferText, setSolutionOfferText] = useState("");
+  const [solutionPlanCards, setSolutionPlanCards] = useState([]);
   const [solutionError, setSolutionError] = useState("");
 
   const [showLeadForm, setShowLeadForm] = useState(false);
@@ -203,6 +257,17 @@ export default function App() {
   const fullAnalysis = useMemo(() => result?.analysis || FALLBACK_ANALYSIS_TEXT, [result]);
   const { typedText, isTyping } = useTypewriter(fullAnalysis, Boolean(result) && status === "success");
   const analysisCards = useMemo(() => splitAnalysisIntoCards(typedText), [typedText]);
+  const {
+    typedText: typedSolutionText,
+    isTyping: isTypingSolution
+  } = useTypewriter(solutionOfferText, solutionStatus === "success");
+  const parsedImplementationCards = useMemo(
+    () =>
+      Array.isArray(solutionPlanCards) && solutionPlanCards.length > 0
+        ? { beforeBlocks: [], cards: solutionPlanCards, afterBlocks: [] }
+        : parseImplementationCards(solutionOfferText),
+    [solutionOfferText, solutionPlanCards]
+  );
 
   function resetFinalStages() {
     setSelectedSiteType("");
@@ -210,6 +275,7 @@ export default function App() {
 
     setSolutionStatus("idle");
     setSolutionOfferText("");
+    setSolutionPlanCards([]);
     setSolutionError("");
 
     setShowLeadForm(false);
@@ -354,6 +420,7 @@ export default function App() {
 
     setSolutionStatus("loading");
     setSolutionOfferText("");
+    setSolutionPlanCards([]);
     setSolutionError("");
     setShowLeadForm(false);
     setLeadSubmitted(false);
@@ -380,9 +447,11 @@ export default function App() {
       setSolutionOfferText(
         response?.solutionOfferText || "Не удалось сформировать предложение. Попробуйте ещё раз."
       );
+      setSolutionPlanCards(Array.isArray(response?.planCards) ? response.planCards : []);
       setSolutionStatus("success");
       setSelectedSiteType(platformName);
     } catch (err) {
+      setSolutionPlanCards([]);
       setSolutionStatus("error");
       setSolutionError(getFriendlyErrorMessage(err));
     }
@@ -566,12 +635,56 @@ export default function App() {
             {solutionStatus === "success" && (
               <article className="result-card solution-card">
                 <h2>🚀 План реализации</h2>
-                <TypewriterText
-                  text={solutionOfferText}
-                  enabled={solutionStatus === "success"}
-                  className="structured-text"
-                  sanitizeMarkdown
-                />
+                {isTypingSolution ? (
+                  <>
+                    <p className="structured-text">{typedSolutionText}</p>
+                    <span className="typing-cursor">|</span>
+                  </>
+                ) : parsedImplementationCards ? (
+                  <div className="plan-cards-layout">
+                    {parsedImplementationCards.beforeBlocks.map((block) => (
+                      <p key={`before-${block}`} className="structured-text">
+                        {block}
+                      </p>
+                    ))}
+
+                    <section className="plan-cards-section">
+                      <h3>🚀 Что стоит внедрить</h3>
+                      {parsedImplementationCards.cards.map((card, index) => (
+                        <div key={`${card.problem}-${index}`} className="plan-card">
+                          <div className="card-problem">
+                            🔴 Проблема
+                            <br />
+                            {card.problem}
+                          </div>
+                          <div className="card-solution">
+                            🔵 Решение
+                            <br />
+                            {card.solution}
+                          </div>
+                          <div className="card-result">
+                            🟢 Результат
+                            <br />
+                            {card.result}
+                          </div>
+                        </div>
+                      ))}
+                    </section>
+
+                    {parsedImplementationCards.afterBlocks.map((block) => (
+                      <p key={`after-${block}`} className="structured-text">
+                        {block}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <TypewriterText
+                    text={solutionOfferText}
+                    enabled={solutionStatus === "success"}
+                    className="structured-text"
+                    sanitizeMarkdown
+                  />
+                )}
 
                 <button type="button" className="implement-cta" onClick={onOpenLeadForm}>
                   Да, давайте реализуем

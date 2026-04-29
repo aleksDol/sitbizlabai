@@ -776,6 +776,42 @@ body {
 .structured-text {
   overflow-wrap: anywhere;
   text-wrap: pretty;
+  line-height: 1.75;
+}
+
+.plan-cards-layout {
+  display: grid;
+  gap: 12px;
+}
+
+.plan-cards-section h3 {
+  margin: 0 0 12px;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.plan-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: #ffffff;
+}
+
+.card-problem {
+  color: #dc2626;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.card-solution {
+  color: #2563eb;
+  margin-bottom: 8px;
+}
+
+.card-result {
+  color: #059669;
+  font-weight: 500;
 }
 
 .typing-cursor {

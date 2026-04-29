@@ -214,7 +214,7 @@ export async function solutionOfferController(req, res) {
         ? "multiple"
         : "single";
 
-    const solutionOfferText = await fetchSolutionOfferFromContext({
+    const solutionPayload = await fetchSolutionOfferFromContext({
       analysisText: analysisText.trim(),
       lossesText: lossesText.trim(),
       siteType: normalizedSiteType,
@@ -228,8 +228,14 @@ export async function solutionOfferController(req, res) {
       trafficSources: normalizedTrafficSources
     });
 
-    return res.status(200).json({ solutionOfferText });
+    return res.status(200).json({
+      solutionOfferText: solutionPayload?.solutionOfferText || SOLUTION_OFFER_FALLBACK_TEXT,
+      planCards: Array.isArray(solutionPayload?.planCards) ? solutionPayload.planCards : []
+    });
   } catch {
-    return res.status(200).json({ solutionOfferText: SOLUTION_OFFER_FALLBACK_TEXT });
+    return res.status(200).json({
+      solutionOfferText: SOLUTION_OFFER_FALLBACK_TEXT,
+      planCards: []
+    });
   }
 }
