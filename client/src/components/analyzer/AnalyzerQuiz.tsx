@@ -131,11 +131,12 @@ export function AnalyzerQuiz({ onComplete }) {
               {ACQUISITION_CHANNELS.map((channel) => (
                 <label key={channel} className={`quiz-option ${channels.includes(channel) ? "selected" : ""}`}>
                   <input
+                    className="quiz-channel-checkbox"
                     type="checkbox"
                     checked={channels.includes(channel)}
                     onChange={() => onToggleChannel(channel)}
                   />
-                  {channel}
+                  <span className="quiz-channel-label">{channel}</span>
                 </label>
               ))}
             </div>

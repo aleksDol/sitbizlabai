@@ -104,8 +104,26 @@ body {
 .quiz-checkbox-list .quiz-option {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
+  min-height: 54px;
+  padding: 12px 14px;
+}
+
+.quiz-channel-checkbox {
+  width: 18px !important;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.quiz-channel-label {
+  font-size: 15px;
+  line-height: 1.35;
+  color: #0f172a;
+  text-align: left;
 }
 
 .quiz-option,
