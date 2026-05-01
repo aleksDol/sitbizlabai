@@ -263,6 +263,7 @@ export default function App() {
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [leadSubmitting, setLeadSubmitting] = useState(false);
   const [leadSubmitError, setLeadSubmitError] = useState("");
+  const [isFullAnalysisUnlocked, setIsFullAnalysisUnlocked] = useState(false);
   const [leadForm, setLeadForm] = useState({
     name: "",
     contact: "",
@@ -282,6 +283,15 @@ export default function App() {
   const fullAnalysis = useMemo(() => result?.analysis || FALLBACK_ANALYSIS_TEXT, [result]);
   const { typedText, isTyping } = useTypewriter(fullAnalysis, Boolean(result) && status === "success");
   const analysisCards = useMemo(() => splitAnalysisIntoCards(typedText), [typedText]);
+  const visibleAnalysisCards = useMemo(
+    () => (isFullAnalysisUnlocked ? analysisCards : analysisCards.slice(0, 2)),
+    [analysisCards, isFullAnalysisUnlocked]
+  );
+  const hiddenAnalysisCards = useMemo(
+    () => (isFullAnalysisUnlocked ? [] : analysisCards.slice(2)),
+    [analysisCards, isFullAnalysisUnlocked]
+  );
+  const hiddenBlocksCount = useMemo(() => Math.max(analysisCards.length - 2, 0), [analysisCards.length]);
   const solutionTextForTypewriter =
     Array.isArray(solutionPlanCards) && solutionPlanCards.length > 0
       ? stripImplementationSection(solutionOfferText)
@@ -295,7 +305,7 @@ export default function App() {
     [hasStructuredPlanCards, solutionOfferText, solutionPlanCards]
   );
 
-  function resetFinalStages() {
+  function resetFinalStages({ preserveLead = false } = {}) {
     setSelectedSiteType("");
     setPlanLoadingStepIndex(0);
 
@@ -306,9 +316,11 @@ export default function App() {
     setPlanCardsVisible(false);
     setSolutionError("");
 
-    setShowLeadForm(false);
-    setLeadSubmitted(false);
-    setLeadForm({ name: "", contact: "", site: "" });
+    if (!preserveLead) {
+      setShowLeadForm(false);
+      setLeadSubmitted(false);
+      setLeadForm({ name: "", contact: "", site: "" });
+    }
   }
 
   useEffect(() => {
@@ -361,6 +373,7 @@ export default function App() {
     setLossesStatus("idle");
     setLossesText("");
     setLossesError("");
+    setIsFullAnalysisUnlocked(false);
 
     resetFinalStages();
 
@@ -417,7 +430,7 @@ export default function App() {
     setLossesStatus("loading");
     setLossesError("");
     setLossesText("");
-    resetFinalStages();
+    resetFinalStages({ preserveLead: true });
     trackLossesCtaClicked({
       hasWebsite: Boolean(quizAnswers?.hasWebsite),
       channelsCount: Array.isArray(quizAnswers?.acquisitionChannels)
@@ -552,6 +565,12 @@ export default function App() {
       });
 
       setLeadSubmitted(true);
+      if (!isFullAnalysisUnlocked) {
+        setIsFullAnalysisUnlocked(true);
+        if (lossesStatus === "idle") {
+          await onEstimateLosses();
+        }
+      }
       trackLeadFormSubmitted({
         hasWebsite: Boolean(quizAnswers?.hasWebsite),
         niche: quizAnswers?.niche || "",
@@ -566,6 +585,10 @@ export default function App() {
     } finally {
       setLeadSubmitting(false);
     }
+  }
+
+  function onUnlockAnalysis() {
+    onOpenLeadForm();
   }
 
   return (
@@ -607,24 +630,99 @@ export default function App() {
 
         {result && (
           <section className="results fade-in delay-3">
-            {analysisCards.map((card) => (
+            <article className="result-card partial-analysis-intro">
+              <h2>Мы уже нашли несколько проблем, но это только часть анализа</h2>
+            </article>
+
+            {visibleAnalysisCards.map((card) => (
               <article key={`${card.key}-${card.title}`} className="result-card">
                 <h2>{card.title}</h2>
                 <p>{card.body}</p>
               </article>
             ))}
+
+            {!isFullAnalysisUnlocked && hiddenBlocksCount > 0 && (
+              <section className="analysis-lock-card">
+                <div className="analysis-fade-overlay" />
+                <div className="analysis-blurred-preview">
+                  {hiddenAnalysisCards.slice(0, 2).map((card) => (
+                    <div key={`hidden-${card.title}`} className="blurred-card-row">
+                      <strong>{card.title}</strong>
+                      <span>{card.body.slice(0, 120)}...</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="analysis-lock-content">
+                  <p className="analysis-lock-badge">🔒 Скрыто ещё {hiddenBlocksCount} блоков</p>
+                  <h3>Мы нашли ещё несколько критических ошибок, которые снижают конверсию сайта</h3>
+                  <p>Покажем полный разбор + расчёт потерь в деньгах</p>
+                  <button type="button" className="losses-cta" onClick={onUnlockAnalysis}>
+                    Показать полный разбор
+                  </button>
+                </div>
+              </section>
+            )}
+
             {isTyping && <span className="typing-cursor">|</span>}
 
-            <div className="losses-cta-wrap">
-              <button
-                type="button"
-                className="losses-cta"
-                onClick={onEstimateLosses}
-                disabled={lossesStatus === "loading"}
-              >
-                Да, хочу узнать, что я теряю
-              </button>
-            </div>
+            {!isFullAnalysisUnlocked && showLeadForm && (
+              <section className="lead-form-wrap fade-slide-in">
+                <h3>Откроем полный разбор после отправки контакта</h3>
+                <p>Оставьте контакты и мы покажем оставшиеся блоки анализа и блок потерь.</p>
+
+                <form className="lead-form" onSubmit={onLeadSubmit}>
+                  <label>
+                    Имя
+                    <input
+                      type="text"
+                      value={leadForm.name}
+                      onChange={(event) => onLeadFieldChange("name", event.target.value)}
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Контакт (Telegram или Email)
+                    <input
+                      type="text"
+                      value={leadForm.contact}
+                      onChange={(event) => onLeadFieldChange("contact", event.target.value)}
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Сайт
+                    <input
+                      type="url"
+                      value={leadForm.site}
+                      onChange={(event) => onLeadFieldChange("site", event.target.value)}
+                      required={Boolean(quizAnswers?.hasWebsite)}
+                    />
+                  </label>
+
+                  <button type="submit" className="lead-submit-btn">
+                    {leadSubmitting ? "Отправляем..." : "Открыть полный разбор"}
+                  </button>
+                </form>
+
+                {leadSubmitError && <p className="lead-error">{leadSubmitError}</p>}
+                {leadSubmitted && <p className="lead-success">Спасибо! Открываем полный разбор...</p>}
+              </section>
+            )}
+
+            {(isFullAnalysisUnlocked || hiddenBlocksCount === 0) && (
+              <div className="losses-cta-wrap">
+                <button
+                  type="button"
+                  className="losses-cta"
+                  onClick={onEstimateLosses}
+                  disabled={lossesStatus === "loading" || lossesStatus === "success"}
+                >
+                  Да, хочу узнать, что я теряю
+                </button>
+              </div>
+            )}
 
             {lossesStatus === "loading" && <section className="losses-loading">Считаем потери...</section>}
 
