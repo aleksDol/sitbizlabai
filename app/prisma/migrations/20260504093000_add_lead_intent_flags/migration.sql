@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Lead"
+ADD COLUMN "isInterested" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "clickedFinalCTA" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "intent" TEXT;

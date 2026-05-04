@@ -66,6 +66,9 @@ model Lead {
   siteType          String?
   hasRepeatSales    Boolean?
   trafficSources    String?
+  isInterested      Boolean    @default(false)
+  clickedFinalCTA   Boolean    @default(false)
+  intent            String?
 
   status            LeadStatus @default(NEW)
   managerComment    String?

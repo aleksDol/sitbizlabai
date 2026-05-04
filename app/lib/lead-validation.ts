@@ -180,6 +180,9 @@ export function validateCreateLeadPayload(payload: unknown): ValidationResult<Pr
 export type UpdateLeadInput = {
   status?: LeadStatus;
   managerComment?: string | null;
+  isInterested?: boolean;
+  clickedFinalCTA?: boolean;
+  intent?: "low" | "medium" | "high" | null;
 };
 
 export function validateUpdateLeadPayload(payload: unknown): ValidationResult<UpdateLeadInput> {
@@ -205,6 +208,34 @@ export function validateUpdateLeadPayload(payload: unknown): ValidationResult<Up
       errors.push("Field 'managerComment' must be a string or null.");
     } else {
       data.managerComment = managerComment;
+    }
+  }
+
+  if (payload.isInterested !== undefined) {
+    const isInterested = normalizeOptionalBoolean(payload.isInterested);
+    if (isInterested === undefined || isInterested === null) {
+      errors.push("Field 'isInterested' must be a boolean.");
+    } else {
+      data.isInterested = isInterested;
+    }
+  }
+
+  if (payload.clickedFinalCTA !== undefined) {
+    const clickedFinalCTA = normalizeOptionalBoolean(payload.clickedFinalCTA);
+    if (clickedFinalCTA === undefined || clickedFinalCTA === null) {
+      errors.push("Field 'clickedFinalCTA' must be a boolean.");
+    } else {
+      data.clickedFinalCTA = clickedFinalCTA;
+    }
+  }
+
+  if (payload.intent !== undefined) {
+    if (payload.intent === null) {
+      data.intent = null;
+    } else if (typeof payload.intent === "string" && ["low", "medium", "high"].includes(payload.intent)) {
+      data.intent = payload.intent as "low" | "medium" | "high";
+    } else {
+      errors.push("Field 'intent' must be one of: low, medium, high, or null.");
     }
   }
 

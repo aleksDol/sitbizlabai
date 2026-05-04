@@ -47,6 +47,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:5051}
+        VITE_LEADS_API_URL: ${VITE_LEADS_API_URL:-http://localhost:3000}
     restart: always
     depends_on:
       - analyzer-server

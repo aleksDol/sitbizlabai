@@ -834,6 +834,81 @@ body {
   font-weight: 500;
 }
 
+.final-cta-wrap {
+  margin-top: 16px;
+  border: 1px solid #dbe3f2;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f8fbff;
+}
+
+.final-cta-wrap h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.final-cta-wrap p {
+  margin: 0 0 12px;
+  color: #334155;
+  line-height: 1.55;
+}
+
+.cta-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 999px;
+  animation: spin 0.75s linear infinite;
+}
+
+.final-cta-success {
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  background: #f0fdf4;
+  padding: 12px;
+}
+
+.final-cta-success-title {
+  margin: 0;
+  color: #166534;
+  font-weight: 600;
+}
+
+.final-cta-success-sub {
+  margin: 8px 0 0;
+  color: #166534;
+  font-size: 14px;
+}
+
+.final-cta-telegram {
+  display: inline-block;
+  margin-top: 10px;
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.final-cta-error .retry-btn {
+  margin-top: 8px;
+}
+
+.lead-error-detail {
+  margin: 0;
+  color: #991b1b;
+  font-size: 13px;
+}
+
+.fade-up {
+  animation: fadeUp 0.3s ease both;
+}
+
 .result-card {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -1007,6 +1082,23 @@ body {
   from {
     opacity: 0;
     transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
   to {
     opacity: 1;

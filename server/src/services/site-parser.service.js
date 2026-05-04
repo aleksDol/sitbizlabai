@@ -24,6 +24,18 @@ function isRetryableSiteError(error) {
   return ["ECONNABORTED", "ETIMEDOUT", "ECONNRESET"].includes(error?.code);
 }
 
+function isProtectedSiteResponse(error) {
+  const status = error?.response?.status;
+  const html = typeof error?.response?.data === "string" ? error.response.data.toLowerCase() : "";
+  const protectionMarkers = ["захищена сторінка", "protected page", "cloudflare", "attention required"];
+
+  if (status === 429 || status === 403) {
+    return true;
+  }
+
+  return protectionMarkers.some((marker) => html.includes(marker));
+}
+
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -47,6 +59,10 @@ async function fetchHtml(url) {
     } catch (error) {
       if (error instanceof HttpError) {
         throw error;
+      }
+
+      if (isProtectedSiteResponse(error)) {
+        throw new HttpError(429, ERROR_CODES.SITE_PROTECTED, ERROR_MESSAGES.SITE_PROTECTED);
       }
 
       lastError = error;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnalyzerQuiz } from "./components/analyzer/AnalyzerQuiz";
 import { AnalysisProgress } from "./components/analyzer/AnalysisProgress";
 import { TypewriterText } from "./components/analyzer/TypewriterText";
+import { FinalCTA } from "./components/analyzer/FinalCTA";
 import { useTypewriter } from "./hooks/use-typewriter";
 import { useAnalysisProgress } from "./hooks/use-analysis-progress";
 import { FALLBACK_ANALYSIS_TEXT, MIN_LOADING_DURATION_MS } from "./constants/analyze-ui.constants";
@@ -10,7 +11,7 @@ import {
   createSolutionOffer,
   estimateBusinessLosses
 } from "./services/analyze-api";
-import { createLead } from "./services/leads-api";
+import { createLead, updateLead } from "./services/leads-api";
 import { wait } from "./utils/async.utils";
 import { getFriendlyErrorMessage } from "./utils/error.utils";
 import { reachMetrikaGoal } from "./utils/metrika";
@@ -264,6 +265,9 @@ export default function App() {
   const [leadSubmitting, setLeadSubmitting] = useState(false);
   const [leadSubmitError, setLeadSubmitError] = useState("");
   const [isFullAnalysisUnlocked, setIsFullAnalysisUnlocked] = useState(false);
+  const [leadId, setLeadId] = useState(null);
+  const [finalCtaStatus, setFinalCtaStatus] = useState("idle");
+  const [finalCtaError, setFinalCtaError] = useState("");
   const [leadForm, setLeadForm] = useState({
     name: "",
     contact: "",
@@ -315,6 +319,8 @@ export default function App() {
     setIsSolutionTypingDone(false);
     setPlanCardsVisible(false);
     setSolutionError("");
+    setFinalCtaStatus("idle");
+    setFinalCtaError("");
 
     if (!preserveLead) {
       setShowLeadForm(false);
@@ -322,6 +328,17 @@ export default function App() {
       setLeadForm({ name: "", contact: "", site: "" });
     }
   }
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const storedLeadId = window.localStorage.getItem("leadId");
+    if (storedLeadId && storedLeadId.trim()) {
+      setLeadId(storedLeadId);
+    }
+  }, []);
 
   useEffect(() => {
     if (solutionStatus !== "loading") {
@@ -539,7 +556,7 @@ export default function App() {
     setLeadSubmitted(false);
 
     try {
-      await createLead({
+      const createdLead = await createLead({
         name: leadForm.name?.trim() || "",
         contact: leadForm.contact?.trim() || "",
         niche: quizAnswers?.hasWebsite ? null : quizAnswers?.niche?.trim() || null,
@@ -564,6 +581,11 @@ export default function App() {
             : "single"
       });
 
+      const createdLeadId = createdLead?.id || null;
+      setLeadId(createdLeadId);
+      if (createdLeadId && typeof window !== "undefined") {
+        window.localStorage.setItem("leadId", createdLeadId);
+      }
       setLeadSubmitted(true);
       if (!isFullAnalysisUnlocked) {
         setIsFullAnalysisUnlocked(true);
@@ -589,6 +611,32 @@ export default function App() {
 
   function onUnlockAnalysis() {
     onOpenLeadForm();
+  }
+
+  async function onFinalCtaClick() {
+    if (finalCtaStatus === "loading" || finalCtaStatus === "success") {
+      return;
+    }
+
+    if (!leadId) {
+      setFinalCtaError("Ошибка: не найден ID заявки. Попробуйте обновить страницу");
+      return;
+    }
+
+    setFinalCtaStatus("loading");
+    setFinalCtaError("");
+
+    try {
+      await updateLead(leadId, {
+        isInterested: true,
+        clickedFinalCTA: true,
+        intent: "high"
+      });
+      setFinalCtaStatus("success");
+    } catch {
+      setFinalCtaStatus("idle");
+      setFinalCtaError("Не удалось отправить заявку");
+    }
   }
 
   return (
@@ -829,60 +877,15 @@ export default function App() {
                   </div>
                 ) : null}
 
-                <button type="button" className="implement-cta" onClick={onOpenLeadForm}>
-                  Да, давайте реализуем
-                </button>
-
-                {showLeadForm && (
-                  <section className="lead-form-wrap fade-slide-in">
-                    <h3>Хотите внедрить это у себя?</h3>
-                    <p>
-                      Оставьте контакты — мы разберём вашу ситуацию и покажем, как собрать понятную систему под ваш
-                      бизнес: сайт, заявки, аналитику и повторные касания.
-                    </p>
-
-                    <form className="lead-form" onSubmit={onLeadSubmit}>
-                      <label>
-                        Имя
-                        <input
-                          type="text"
-                          value={leadForm.name}
-                          onChange={(event) => onLeadFieldChange("name", event.target.value)}
-                          required
-                        />
-                      </label>
-
-                      <label>
-                        Контакт (Telegram или Email)
-                        <input
-                          type="text"
-                          value={leadForm.contact}
-                          onChange={(event) => onLeadFieldChange("contact", event.target.value)}
-                          required
-                        />
-                      </label>
-
-                      <label>
-                        Сайт
-                        <input
-                          type="url"
-                          value={leadForm.site}
-                          onChange={(event) => onLeadFieldChange("site", event.target.value)}
-                          required={Boolean(quizAnswers?.hasWebsite)}
-                        />
-                      </label>
-
-                      <button type="submit" className="lead-submit-btn">
-                        {leadSubmitting ? "Отправляем..." : "Отправить"}
-                      </button>
-                    </form>
-
-                    {leadSubmitError && <p className="lead-error">{leadSubmitError}</p>}
-                    {leadSubmitted && (
-                      <p className="lead-success">Спасибо! Мы свяжемся с вами и обсудим реализацию.</p>
-                    )}
-                  </section>
-                )}
+                {isFullAnalysisUnlocked ? (
+                  <FinalCTA
+                    status={finalCtaStatus}
+                    onClick={onFinalCtaClick}
+                    onRetry={onFinalCtaClick}
+                    error={finalCtaError}
+                    telegramUrl={import.meta.env.VITE_TELEGRAM_URL || ""}
+                  />
+                ) : null}
               </article>
             )}
           </section>

@@ -32,3 +32,21 @@ export async function createLead(payload) {
   return data;
 }
 
+export async function updateLead(id, payload) {
+  const response = await fetch(`${getLeadsApiBaseUrl()}/api/leads/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message =
+      (data && (data.error || (Array.isArray(data.errors) ? data.errors.join(" ") : ""))) ||
+      "Не удалось обновить заявку. Попробуйте еще раз.";
+    throw new Error(message);
+  }
+
+  return data;
+}
