@@ -54,6 +54,18 @@ function parseLeadStatus(value: unknown): LeadStatus | undefined {
   return undefined;
 }
 
+function isValidPhone(contact: string): boolean {
+  const normalized = contact.replace(/[^\d+]/g, "");
+  const digits = normalized.replace(/\D/g, "");
+  if (digits.length < 10 || digits.length > 15) return false;
+  return /^\+?[\d\s\-()]+$/.test(contact);
+}
+
+function isValidTelegramUsername(contact: string): boolean {
+  const normalized = contact.startsWith("@") ? contact.slice(1) : contact;
+  return /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(normalized);
+}
+
 export type CreateLeadInput = {
   name: string;
   contact: string;
@@ -86,6 +98,8 @@ export function validateCreateLeadPayload(payload: unknown): ValidationResult<Pr
   const contact = normalizeString(payload.contact);
   if (!contact) {
     errors.push("Field 'contact' is required.");
+  } else if (!isValidPhone(contact) && !isValidTelegramUsername(contact)) {
+    errors.push("Field 'contact' must be a valid phone number or Telegram username.");
   }
 
   const websiteUrl = normalizeOptionalString(payload.websiteUrl);

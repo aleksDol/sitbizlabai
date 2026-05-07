@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { LeadStatus } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
@@ -128,4 +128,3 @@ export default async function AdminLeadsPage({ searchParams }: PageProps) {
     </main>
   );
 }
-
