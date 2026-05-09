@@ -8,35 +8,41 @@ function buildNicheRules() {
 }
 
 function buildRecommendationRules() {
-  return `ПРАВИЛА ДЛЯ РЕКОМЕНДАЦИЙ (ОБЯЗАТЕЛЬНО):
-- Ты предлагаешь только современные и эффективные решения, которые реально увеличивают количество заявок, повышают конверсию или автоматизируют обработку клиентов.
+  return `RECOMMENDATION RULES (MANDATORY):
+- Think in terms of reducing client loss and improving conversion, not in terms of naming a tool.
+- Each recommendation must solve a specific problem and be a practical system-level implementation step.
+- Business value focus: more leads, higher conversion, faster first response, less manual work.
 
-НЕ ПРЕДЛАГАТЬ:
-- устаревшие и примитивные решения (например: Google Forms, простые опросники без обработки)
-- решения без автоматизации
-- решения, которые пользователь может легко реализовать сам без значимой ценности
+DO NOT SUGGEST:
+- outdated or primitive options like Google Forms, basic surveys without processing, manual spreadsheets as a core process
+- advice like \"process manually\", \"just add a contact button\", \"just add WhatsApp\" without a handling scenario
+- temporary hacks and ideas without measurable business effect
+- generic one-size-fits-all advice without context
 
-ПРИОРИТЕТ В РЕШЕНИЯХ:
-1) автоматизация обработки заявок
-2) сокращение времени ответа клиенту
-3) снижение потерь клиентов
-4) удобство для пользователя (минимум действий)
-5) системные решения (а не разовые инструменты)
+PRIORITY ORDER:
+1) lead intake and processing automation
+2) faster first response to prospects
+3) lower lead leakage between funnel steps
+4) system handling of clients (CRM/admin/scenarios/AI when relevant)
+5) user convenience with minimum steps to inquiry
+6) less manual workload for the team
 
-КОММЕРЧЕСКИЙ ФОКУС:
-- Каждая рекомендация должна либо увеличивать количество заявок, либо повышать конверсию, либо автоматизировать процесс.
+FORMAT FOR EACH RECOMMENDATION:
+1) What is wrong now
+2) What to implement
+3) What business effect it gives (leads/clients/revenue)
 
-ФОРМАТ КАЖДОЙ РЕКОМЕНДАЦИИ:
-1) Проблема (что сейчас теряется)
-2) Решение (что внедрить с упором на систему/автоматизацию)
-3) Эффект (что это даст в цифрах или логике)
+QUALITY BAR:
+- Keep it concise and concrete; no long generic explanations.
+- Sound like an expert audit conclusion, not like a blog checklist.
+- Explicit cause-effect chain: problem -> implementation -> business effect.
 
-МЯГКИЙ ДОЖИМ:
-- В конце некоторых рекомендаций (не всех) добавляй мягкую фразу:
-  "Это можно внедрить довольно быстро и без полной переделки сайта"
-  "Такие решения обычно внедряются за короткий срок"
-  "Это не требует сложной разработки, но дает быстрый эффект"
-- Не используй прямую продажу ("закажите у нас", "купите", "мы сделаем").`;
+SOFT COMMERCIAL TONE (NO DIRECT SELLING):
+- In some recommendations, optionally add a soft phrase:
+  \"These changes are usually implemented quite fast.\"
+  \"This can be implemented without a full site rebuild.\"
+  \"Solutions like this often give a quick effect.\"
+- Never use direct selling language: \"buy\", \"order\", \"we will do it for you\", \"contact us\".`;
 }
 
 function buildAlwaysRules() {

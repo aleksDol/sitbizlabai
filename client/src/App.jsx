@@ -39,6 +39,11 @@ const PLAN_LOADING_STEPS = [
   "Подбираем подходящие решения",
   "Формируем понятный план"
 ];
+const UNLOCK_LOADING_STEPS = [
+  "⏺ Анализируем точки потери клиентов...",
+  "⏺ Формируем рекомендации...",
+  "⏺ Подготавливаем полный разбор..."
+];
 
 function normalizeHeading(heading) {
   return heading
@@ -100,6 +105,90 @@ function splitAnalysisIntoCards(text) {
   }
 
   return cards;
+}
+
+function extractPreviewProblemItems(problemText) {
+  const chunks = (problemText || "")
+    .split(/\n+/)
+    .map((line) => line.replace(/^[-*•\d.)\s]+/, "").trim())
+    .filter(Boolean);
+
+  if (chunks.length === 0) return [];
+  return chunks.filter((line) => line.length > 20);
+}
+
+function enrichProblemPreview(text) {
+  const source = (text || "").replace(/\s+/g, " ").trim();
+  if (!source) return "";
+
+  const lower = source.toLowerCase();
+
+  if (lower.includes("аналитик")) {
+    return "Сейчас сложно понять, какие действия реально приводят клиентов. Из-за этого часть времени и бюджета может уходить в каналы, которые не дают заявок, а точки роста остаются незаметными.";
+  }
+
+  if (lower.includes("ручн") || lower.includes("обработ")) {
+    return "Часть заявок может теряться из-за ручной обработки: клиент ждёт ответ, отвлекается и уходит. Особенно в вечерние часы и выходные это напрямую снижает конверсию в оплату.";
+  }
+
+  if (lower.includes("форм") || lower.includes("заявк")) {
+    return "Путь до заявки может быть длинным или неочевидным, поэтому часть заинтересованных клиентов не доходит до контакта. В результате вы платите за трафик, но не получаете его в выручке.";
+  }
+
+  const hasBusinessImpact = /заяв|клиент|конверс|деньг|бюджет|выручк|продаж/i.test(source);
+  if (hasBusinessImpact) {
+    return source;
+  }
+
+  return `${source} Это замедляет путь клиента к заявке и снижает долю обращений, которые доходят до оплаты.`;
+}
+
+function pickRecommendationPreview(cards) {
+  const recommendationCard = cards.find((card) => card.key === "recommendations");
+  if (recommendationCard?.body) {
+    const firstLine = recommendationCard.body
+      .split(/\n+/)
+      .map((line) => line.replace(/^[-*•\d.)\s]+/, "").trim())
+      .find(Boolean);
+    if (firstLine) {
+      return firstLine;
+    }
+  }
+
+  return "Можно сократить потери заявок через автоматическую обработку обращений и быстрые ответы клиентам — такие изменения обычно дают эффект без полной переделки сайта.";
+}
+
+function buildPreUnlockPreview(cards) {
+  const problemsCard = cards.find((card) => card.key === "problems");
+  let problemItems = extractPreviewProblemItems(problemsCard?.body).slice(0, 2);
+  if (problemItems.length === 0) {
+    problemItems = cards
+      .filter((card) => card.key !== "recommendations")
+      .flatMap((card) => extractPreviewProblemItems(card.body))
+      .slice(0, 2);
+  }
+  const visibleCards = problemItems.map((item, index) => ({
+    key: `preview-problem-${index + 1}`,
+    title: `Проблема ${index + 1}`,
+    body: enrichProblemPreview(item)
+  }));
+
+  visibleCards.push({
+    key: "preview-recommendation",
+    title: "Что можно улучшить",
+    body: pickRecommendationPreview(cards)
+  });
+
+  const usedBodies = new Set(problemItems);
+  const hiddenCards = cards.filter((card) => {
+    if (card.key !== "problems") return true;
+    return extractPreviewProblemItems(card.body).some((item) => !usedBodies.has(item));
+  });
+
+  return {
+    visibleCards,
+    hiddenCards
+  };
 }
 
 function extractProblemsForLosses(fullAnalysis) {
@@ -273,10 +362,11 @@ export default function App() {
   const [solutionError, setSolutionError] = useState("");
 
   const [showLeadForm, setShowLeadForm] = useState(false);
-  const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [leadSubmitting, setLeadSubmitting] = useState(false);
   const [leadSubmitError, setLeadSubmitError] = useState("");
   const [isFullAnalysisUnlocked, setIsFullAnalysisUnlocked] = useState(false);
+  const [isUnlockLoading, setIsUnlockLoading] = useState(false);
+  const [unlockLoadingStepIndex, setUnlockLoadingStepIndex] = useState(0);
   const [leadId, setLeadId] = useState(null);
   const [finalCtaStatus, setFinalCtaStatus] = useState("idle");
   const [finalCtaError, setFinalCtaError] = useState("");
@@ -299,15 +389,19 @@ export default function App() {
   const fullAnalysis = useMemo(() => result?.analysis || FALLBACK_ANALYSIS_TEXT, [result]);
   const { typedText, isTyping } = useTypewriter(fullAnalysis, Boolean(result) && status === "success");
   const analysisCards = useMemo(() => splitAnalysisIntoCards(typedText), [typedText]);
+  const preUnlockPreview = useMemo(() => buildPreUnlockPreview(analysisCards), [analysisCards]);
   const visibleAnalysisCards = useMemo(
-    () => (isFullAnalysisUnlocked ? analysisCards : analysisCards.slice(0, 2)),
-    [analysisCards, isFullAnalysisUnlocked]
+    () => (isFullAnalysisUnlocked ? analysisCards : preUnlockPreview.visibleCards),
+    [analysisCards, isFullAnalysisUnlocked, preUnlockPreview.visibleCards]
   );
   const hiddenAnalysisCards = useMemo(
-    () => (isFullAnalysisUnlocked ? [] : analysisCards.slice(2)),
-    [analysisCards, isFullAnalysisUnlocked]
+    () => (isFullAnalysisUnlocked ? [] : preUnlockPreview.hiddenCards),
+    [isFullAnalysisUnlocked, preUnlockPreview.hiddenCards]
   );
-  const hiddenBlocksCount = useMemo(() => Math.max(analysisCards.length - 2, 0), [analysisCards.length]);
+  const hiddenBlocksCount = useMemo(
+    () => (isFullAnalysisUnlocked ? 0 : preUnlockPreview.hiddenCards.length),
+    [isFullAnalysisUnlocked, preUnlockPreview.hiddenCards.length]
+  );
   const solutionTextForTypewriter =
     Array.isArray(solutionPlanCards) && solutionPlanCards.length > 0
       ? stripImplementationSection(solutionOfferText)
@@ -336,7 +430,6 @@ export default function App() {
 
     if (!preserveLead) {
       setShowLeadForm(false);
-      setLeadSubmitted(false);
       setLeadForm({ name: "", contact: "", site: "" });
     }
   }
@@ -364,6 +457,19 @@ export default function App() {
 
     return () => clearInterval(timer);
   }, [solutionStatus]);
+
+  useEffect(() => {
+    if (!isUnlockLoading) {
+      setUnlockLoadingStepIndex(0);
+      return undefined;
+    }
+
+    const timer = setInterval(() => {
+      setUnlockLoadingStepIndex((prev) => Math.min(prev + 1, UNLOCK_LOADING_STEPS.length - 1));
+    }, 600);
+
+    return () => clearInterval(timer);
+  }, [isUnlockLoading]);
 
   useEffect(() => {
     if (solutionStatus !== "success" || !parsedImplementationCards) {
@@ -509,7 +615,6 @@ export default function App() {
     setIsSolutionTypingDone(false);
     setSolutionError("");
     setShowLeadForm(false);
-    setLeadSubmitted(false);
     const startedAt = Date.now();
 
     try {
@@ -545,7 +650,6 @@ export default function App() {
 
   function onOpenLeadForm() {
     setShowLeadForm(true);
-    setLeadSubmitted(false);
     setLeadSubmitting(false);
     setLeadSubmitError("");
     setLeadForm((prev) => ({
@@ -571,7 +675,6 @@ export default function App() {
 
     setLeadSubmitting(true);
     setLeadSubmitError("");
-    setLeadSubmitted(false);
 
     try {
       const createdLead = await createLead({
@@ -604,7 +707,9 @@ export default function App() {
       if (createdLeadId && typeof window !== "undefined") {
         window.localStorage.setItem("leadId", createdLeadId);
       }
-      setLeadSubmitted(true);
+      setIsUnlockLoading(true);
+      await wait(1800);
+      setIsUnlockLoading(false);
       if (!isFullAnalysisUnlocked) {
         setIsFullAnalysisUnlocked(true);
         if (lossesStatus === "idle") {
@@ -721,7 +826,7 @@ export default function App() {
                 <div className="analysis-lock-content">
                   <p className="analysis-lock-badge">🔒 Скрыто ещё {hiddenBlocksCount} блоков</p>
                   <h3>Мы нашли ещё несколько критических ошибок, которые снижают конверсию сайта</h3>
-                  <p>Покажем полный разбор + расчёт потерь в деньгах</p>
+                  <p>В полном разборе покажем оставшиеся точки потери клиентов и какие изменения дадут самый быстрый эффект.</p>
                   <button type="button" className="losses-cta" onClick={onUnlockAnalysis}>
                     Показать полный разбор
                   </button>
@@ -731,50 +836,39 @@ export default function App() {
 
             {isTyping && <span className="typing-cursor">|</span>}
 
-            {!isFullAnalysisUnlocked && showLeadForm && (
+            {!isFullAnalysisUnlocked && showLeadForm && !isUnlockLoading && (
               <section className="lead-form-wrap fade-slide-in">
-                <h3>Откроем полный разбор после отправки контакта</h3>
-                <p>Оставьте контакты и мы покажем оставшиеся блоки анализа и блок потерь.</p>
+                <h3>Открыть полный разбор</h3>
+                <p>Мы нашли ещё несколько точек, которые могут влиять на количество заявок и повторных клиентов.</p>
 
                 <form className="lead-form" onSubmit={onLeadSubmit}>
                   <label>
-                    Имя
-                    <input
-                      type="text"
-                      value={leadForm.name}
-                      onChange={(event) => onLeadFieldChange("name", event.target.value)}
-                      required
-                    />
-                  </label>
-
-                  <label>
-                    Контакт (телефон или Telegram)
+                    Telegram или телефон
                     <input
                       type="text"
                       value={leadForm.contact}
                       onChange={(event) => onLeadFieldChange("contact", event.target.value)}
-                      placeholder="+7 999 123-45-67 или @username"
+                      placeholder="@username или телефон"
                       required
                     />
                   </label>
 
-                  <label>
-                    Сайт
-                    <input
-                      type="url"
-                      value={leadForm.site}
-                      onChange={(event) => onLeadFieldChange("site", event.target.value)}
-                      required={Boolean(quizAnswers?.hasWebsite)}
-                    />
-                  </label>
-
                   <button type="submit" className="lead-submit-btn">
-                    {leadSubmitting ? "Отправляем..." : "Открыть полный разбор"}
+                    {leadSubmitting ? "Отправляем..." : "Показать полный анализ"}
                   </button>
                 </form>
 
                 {leadSubmitError && <p className="lead-error">{leadSubmitError}</p>}
-                {leadSubmitted && <p className="lead-success">Спасибо! Открываем полный разбор...</p>}
+              </section>
+            )}
+
+            {!isFullAnalysisUnlocked && showLeadForm && isUnlockLoading && (
+              <section className="unlock-loading-wrap fade-slide-in" aria-live="polite">
+                {UNLOCK_LOADING_STEPS.map((step, index) => (
+                  <p key={step} className={`unlock-loading-step ${index <= unlockLoadingStepIndex ? "visible" : ""}`}>
+                    {step}
+                  </p>
+                ))}
               </section>
             )}
 
