@@ -186,7 +186,7 @@ function enrichProblemPreview(text, { isBusinessMode = false, businessContext = 
   }
 
   if (isBusinessMode && (lower.includes("ручн") || lower.includes("обработ"))) {
-    return "Продажи завязаны на ручной обработке обращений: при росте потока часть клиентов может не дождаться ответа. Это снижает конверсию в оплату и создаёт нестабильность по заявкам.";
+    return "Продажи завязаны на ручной обработке обращений: при росте потока часть клиентов может не дождаться ответа. Из-за этого ответы запаздывают, а часть заявок откладывается на потом.";
   }
 
   if (lower.includes("аналитик")) {
@@ -194,7 +194,7 @@ function enrichProblemPreview(text, { isBusinessMode = false, businessContext = 
   }
 
   if (lower.includes("ручн") || lower.includes("обработ")) {
-    return "Часть заявок может теряться из-за ручной обработки: клиент ждёт ответ, отвлекается и уходит. Особенно в вечерние часы и выходные это напрямую снижает конверсию в оплату.";
+    return "Часть заявок может теряться из-за ручной обработки: клиент ждёт ответ, отвлекается и уходит. Особенно в вечерние часы и выходные некоторые обращения остаются без быстрого ответа.";
   }
 
   if (lower.includes("форм") || lower.includes("заявк")) {
@@ -207,10 +207,10 @@ function enrichProblemPreview(text, { isBusinessMode = false, businessContext = 
   }
 
   if (isBusinessMode) {
-    return `${source} Это снижает скорость обработки обращений и уменьшает долю клиентов, которые доходят до оплаты.`;
+    return `${source} В результате часть обращений может потеряться в процессе, и клиенту сложнее получить ответ вовремя.`;
   }
 
-  return `${source} Это замедляет путь клиента к заявке и снижает долю обращений, которые доходят до оплаты.`;
+  return `${source} Из-за этого человек может не сразу понять, какой шаг главный, и уйти без заявки.`;
 }
 
 function pickRecommendationPreview(cards, { isBusinessMode = false, businessContext = "" } = {}) {
@@ -257,14 +257,14 @@ function ensurePreviewRecommendationText(text, { isBusinessMode = false, busines
   if (isBusinessMode) {
     return "Можно собрать обращения в более понятный процесс: быстрый первый ответ, учёт заявок и простые повторные касания. Это уменьшит потери клиентов и сделает продажи стабильнее.";
   }
-  return "Можно сфокусировать путь клиента до заявки: оставить один главный сценарий действия и убрать конкурирующие элементы. Это сделает следующий шаг понятнее и повысит долю обращений.";
+  return "Можно сделать путь до заявки короче и понятнее: оставить один главный сценарий действия и убрать лишние отвлечения. Это поможет пользователю быстрее перейти к обращению.";
 }
 
 function pickProblemTitle(problemText, index, { isBusinessMode = false } = {}) {
   const source = (problemText || "").toLowerCase();
   const siteTitles = [
     "Где теряются заявки",
-    "Что снижает конверсию",
+    "Что мешает оставить заявку",
     "Почему часть клиентов может уходить"
   ];
   const businessTitles = [
@@ -275,7 +275,7 @@ function pickProblemTitle(problemText, index, { isBusinessMode = false } = {}) {
 
   if (source.includes("повтор")) return "Что мешает повторным продажам";
   if (source.includes("ответ") || source.includes("скорост")) return "Где теряется скорость ответа";
-  if (source.includes("конверс")) return "Что снижает конверсию";
+  if (source.includes("конверс")) return "Что мешает оставить заявку";
   if (source.includes("клиент") || source.includes("заяв")) return "Почему часть клиентов может уходить";
 
   const fallback = isBusinessMode ? businessTitles : siteTitles;
