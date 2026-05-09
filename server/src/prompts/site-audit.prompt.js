@@ -36,6 +36,9 @@ QUALITY BAR:
 - Keep it concise and concrete; no long generic explanations.
 - Sound like an expert audit conclusion, not like a blog checklist.
 - Explicit cause-effect chain: problem -> implementation -> business effect.
+- Each insight/problem must cover a different issue area (for example: response speed, repeat sales, analytics, client path). Do not rephrase the same idea in multiple blocks.
+- Avoid repeating the same ending across neighboring lines (for example repeated tails about conversion/leads drop).
+- Never use hype-like or odd phrases: "зайчики контента", "магия", "вау-эффект", "вирусность", "хайп", "эмоциональные качели", "прогрев аудитории".
 
 SOFT COMMERCIAL TONE (NO DIRECT SELLING):
 - In some recommendations, optionally add a soft phrase:

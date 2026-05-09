@@ -164,6 +164,10 @@ function pickRecommendationPreview(cards, { isBusinessMode = false, businessCont
       .map((line) => line.replace(/^[-*•\d.)\s]+/, "").trim())
       .find(Boolean);
     if (firstLine) {
+      if (/^проблема\s*:/i.test(firstLine)) {
+        const normalized = firstLine.replace(/^проблема\s*:\s*/i, "").trim();
+        return `Можно ${normalized.charAt(0).toLowerCase()}${normalized.slice(1)} — это поможет сократить потери заявок и сделать обработку обращений стабильнее.`;
+      }
       return firstLine;
     }
   }

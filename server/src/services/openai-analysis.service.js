@@ -10,6 +10,7 @@ import {
 } from "../prompts/implementation-plan.prompt.js";
 import { LOSSES_SYSTEM_PROMPT, buildLossesUserPrompt } from "../prompts/losses.prompt.js";
 import { buildBusinessAnalysisSystemPrompt, buildSystemPrompt } from "../prompts/site-audit.prompt.js";
+import { applyAnalysisQualityChecks } from "../utils/text.utils.js";
 
 const LOSSES_FALLBACK_TEXT = "Не удалось рассчитать потери. Попробуйте еще раз.";
 const IMPLEMENTATION_PLAN_FALLBACK_TEXT =
@@ -50,7 +51,12 @@ function normalizePlanCards(rawCards) {
       if (!problem || !solution || !result) {
         return null;
       }
-      return { problem, solution, result, priority };
+      return {
+        problem: applyAnalysisQualityChecks(problem),
+        solution: applyAnalysisQualityChecks(solution),
+        result: applyAnalysisQualityChecks(result),
+        priority
+      };
     })
     .filter(Boolean);
 }
@@ -58,7 +64,7 @@ function normalizePlanCards(rawCards) {
 function extractSolutionPayload(rawText) {
   const source = typeof rawText === "string" ? rawText.trim() : "";
   if (!source) {
-    return { solutionOfferText: SOLUTION_OFFER_FALLBACK_TEXT, planCards: [] };
+    return { solutionOfferText: applyAnalysisQualityChecks(SOLUTION_OFFER_FALLBACK_TEXT), planCards: [] };
   }
 
   const parseCandidate = (candidate) => {
@@ -70,8 +76,8 @@ function extractSolutionPayload(rawText) {
 
       const solutionOfferText =
         typeof data.solutionOfferText === "string" && data.solutionOfferText.trim()
-          ? data.solutionOfferText.trim()
-          : source;
+          ? applyAnalysisQualityChecks(data.solutionOfferText.trim())
+          : applyAnalysisQualityChecks(source);
       const planCards = normalizePlanCards(data.planCards);
       return { solutionOfferText, planCards };
     } catch {
@@ -94,7 +100,7 @@ function extractSolutionPayload(rawText) {
     }
   }
 
-  return { solutionOfferText: source, planCards: [] };
+  return { solutionOfferText: applyAnalysisQualityChecks(source), planCards: [] };
 }
 
 function parseAssistantContent(rawContent) {
@@ -263,7 +269,7 @@ async function requestOpenAiText({
 }
 
 export async function fetchOpenAiAnalysis(siteData) {
-  return requestOpenAiText({
+  const result = await requestOpenAiText({
     messages: [
       { role: "system", content: buildSystemPrompt(siteData) },
       { role: "user", content: `Данные сайта:\n${JSON.stringify(siteData)}` }
@@ -271,10 +277,15 @@ export async function fetchOpenAiAnalysis(siteData) {
     fallbackText: OPENAI_ANALYSIS_FALLBACK,
     warningMessage: OPENAI_WARNING_MESSAGE
   });
+
+  return {
+    ...result,
+    text: applyAnalysisQualityChecks(result.text || OPENAI_ANALYSIS_FALLBACK)
+  };
 }
 
 export async function fetchBusinessContextAnalysis(analysisInput) {
-  return requestOpenAiText({
+  const result = await requestOpenAiText({
     messages: [
       {
         role: "system",
@@ -288,6 +299,11 @@ export async function fetchBusinessContextAnalysis(analysisInput) {
     fallbackText: OPENAI_ANALYSIS_FALLBACK,
     warningMessage: OPENAI_WARNING_MESSAGE
   });
+
+  return {
+    ...result,
+    text: applyAnalysisQualityChecks(result.text || OPENAI_ANALYSIS_FALLBACK)
+  };
 }
 
 export async function fetchBusinessLossesFromAnalysisText(analysisText, analysisInput = null) {
@@ -300,7 +316,7 @@ export async function fetchBusinessLossesFromAnalysisText(analysisText, analysis
     warningMessage: null
   });
 
-  return result.text || LOSSES_FALLBACK_TEXT;
+  return applyAnalysisQualityChecks(result.text || LOSSES_FALLBACK_TEXT);
 }
 
 export async function fetchImplementationPlanFromContext({
@@ -335,7 +351,7 @@ export async function fetchImplementationPlanFromContext({
     maxTokens: 1200
   });
 
-  return result.text || IMPLEMENTATION_PLAN_FALLBACK_TEXT;
+  return applyAnalysisQualityChecks(result.text || IMPLEMENTATION_PLAN_FALLBACK_TEXT);
 }
 
 export async function fetchSolutionOfferFromContext({
