@@ -117,6 +117,63 @@ function extractPreviewProblemItems(problemText) {
   return chunks.filter((line) => line.length > 20);
 }
 
+function sanitizePreviewText(text) {
+  return (text || "")
+    .replace(/[*_`#]/g, "")
+    .replace(/^\s*[-•*]\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function splitSentences(text) {
+  return sanitizePreviewText(text)
+    .split(/(?<=[.!?])\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function detectPreviewAxis(text, { isBusinessMode = false } = {}) {
+  const source = sanitizePreviewText(text).toLowerCase();
+  if (isBusinessMode) {
+    if (source.includes("ответ") || source.includes("переписк")) return "response_speed";
+    if (source.includes("повтор")) return "repeat_sales";
+    if (source.includes("аналит")) return "analytics";
+    if (source.includes("ручн") || source.includes("обработ")) return "manual_processing";
+    return "client_process";
+  }
+
+  if (source.includes("перв") || source.includes("экран")) return "first_screen";
+  if (source.includes("cta") || source.includes("кноп")) return "cta_overload";
+  if (source.includes("довер") || source.includes("кейс")) return "trust";
+  if (source.includes("мобил")) return "mobile";
+  if (source.includes("структур") || source.includes("блок")) return "blocks_structure";
+  return "lead_path";
+}
+
+function diversifyProblemEnding(text, usedEndings) {
+  const normalized = sanitizePreviewText(text);
+  const endings = [
+    "Это увеличивает риск ухода без заявки.",
+    "Из-за этого следующий шаг для клиента становится менее очевидным.",
+    "В результате часть пользователей откладывает решение и уходит.",
+    "Это замедляет путь до обращения и снижает ясность сценария."
+  ];
+  const currentEnding = endings.find((ending) => normalized.endsWith(ending)) || "";
+
+  if (!currentEnding) {
+    return normalized;
+  }
+
+  if (!usedEndings.has(currentEnding)) {
+    usedEndings.add(currentEnding);
+    return normalized;
+  }
+
+  const replacement = endings.find((item) => !usedEndings.has(item)) || endings[0];
+  usedEndings.add(replacement);
+  return normalized.replace(currentEnding, replacement);
+}
+
 function enrichProblemPreview(text, { isBusinessMode = false, businessContext = "" } = {}) {
   const source = (text || "").replace(/\s+/g, " ").trim();
   if (!source) return "";
@@ -184,6 +241,25 @@ function pickRecommendationPreview(cards, { isBusinessMode = false, businessCont
   return "Можно сократить потери заявок через автоматическую обработку обращений и быстрые ответы клиентам — такие изменения обычно дают эффект без полной переделки сайта.";
 }
 
+function ensurePreviewRecommendationText(text, { isBusinessMode = false, businessContext = "" } = {}) {
+  const normalized = sanitizePreviewText(text).replace(/^проблема\s*:\s*/i, "");
+  const words = normalized.split(/\s+/).filter(Boolean);
+  const hasEffect = /эффект|поможет|снизит|ускорит|стабиль|конверси|заявк|продаж/i.test(normalized);
+  if (words.length >= 8 && hasEffect) {
+    const sentences = splitSentences(normalized);
+    return sentences.slice(0, 2).join(" ");
+  }
+
+  const context = (businessContext || "").toLowerCase();
+  if (isBusinessMode && (context.includes("тг") || context.includes("telegram"))) {
+    return "Можно выстроить понятный сценарий обработки обращений в Telegram: фиксировать входящие заявки и быстрее отвечать на типовые вопросы. Это поможет снизить потери клиентов и стабилизировать повторные продажи.";
+  }
+  if (isBusinessMode) {
+    return "Можно собрать обращения в более понятный процесс: быстрый первый ответ, учёт заявок и простые повторные касания. Это уменьшит потери клиентов и сделает продажи стабильнее.";
+  }
+  return "Можно сфокусировать путь клиента до заявки: оставить один главный сценарий действия и убрать конкурирующие элементы. Это сделает следующий шаг понятнее и повысит долю обращений.";
+}
+
 function pickProblemTitle(problemText, index, { isBusinessMode = false } = {}) {
   const source = (problemText || "").toLowerCase();
   const siteTitles = [
@@ -208,32 +284,78 @@ function pickProblemTitle(problemText, index, { isBusinessMode = false } = {}) {
 
 function buildPreUnlockPreview(cards, { isBusinessMode = false, businessContext = "" } = {}) {
   const problemsCard = cards.find((card) => card.key === "problems");
-  let problemItems = extractPreviewProblemItems(problemsCard?.body).slice(0, 2);
+  let problemItems = extractPreviewProblemItems(problemsCard?.body);
   if (problemItems.length === 0) {
     problemItems = cards
       .filter((card) => card.key !== "recommendations")
       .flatMap((card) => extractPreviewProblemItems(card.body))
-      .slice(0, 2);
+      .slice(0, 5);
   }
-  const visibleCards = problemItems.map((item, index) => ({
-    key: `preview-problem-${index + 1}`,
-    title: pickProblemTitle(item, index, { isBusinessMode }),
-    body: enrichProblemPreview(item, { isBusinessMode, businessContext })
-  }));
 
-  visibleCards.push({
-    key: "preview-recommendation",
-    title: "Что можно улучшить",
-    body: pickRecommendationPreview(cards, { isBusinessMode, businessContext })
+  const selectedProblems = [];
+  const usedAxes = new Set();
+  for (const item of problemItems) {
+    const axis = detectPreviewAxis(item, { isBusinessMode });
+    if (usedAxes.has(axis)) continue;
+    selectedProblems.push(item);
+    usedAxes.add(axis);
+    if (selectedProblems.length === 2) break;
+  }
+  if (selectedProblems.length < 2) {
+    for (const item of problemItems) {
+      if (selectedProblems.includes(item)) continue;
+      selectedProblems.push(item);
+      if (selectedProblems.length === 2) break;
+    }
+  }
+
+  const usedEndings = new Set();
+  const previewProblems = selectedProblems.map((item, index) => {
+    const title = sanitizePreviewText(pickProblemTitle(item, index, { isBusinessMode }));
+    let text = enrichProblemPreview(item, { isBusinessMode, businessContext });
+    text = sanitizePreviewText(text).replace(/^проблема\s*:\s*/i, "");
+    const sentences = splitSentences(text);
+    if (sentences.length < 2) {
+      sentences.push(
+        index === 0
+          ? "Из-за этого часть пользователей может не дойти до обращения."
+          : "В результате клиенту сложнее быстро принять решение и перейти к следующему шагу."
+      );
+    }
+    text = diversifyProblemEnding(sentences.slice(0, 3).join(" "), usedEndings);
+    return { title, text };
   });
 
-  const usedBodies = new Set(problemItems);
+  const previewRecommendation = {
+    title: "Что можно улучшить",
+    text: ensurePreviewRecommendationText(pickRecommendationPreview(cards, { isBusinessMode, businessContext }), {
+      isBusinessMode,
+      businessContext
+    })
+  };
+
+  const visibleCards = [
+    ...previewProblems.map((item, index) => ({
+      key: `preview-problem-${index + 1}`,
+      title: item.title,
+      body: item.text
+    })),
+    {
+      key: "preview-recommendation",
+      title: previewRecommendation.title,
+      body: previewRecommendation.text
+    }
+  ];
+
+  const usedBodies = new Set(selectedProblems);
   const hiddenCards = cards.filter((card) => {
     if (card.key !== "problems") return true;
     return extractPreviewProblemItems(card.body).some((item) => !usedBodies.has(item));
   });
 
   return {
+    previewProblems,
+    previewRecommendation,
     visibleCards,
     hiddenCards
   };
