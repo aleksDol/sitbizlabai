@@ -923,7 +923,7 @@ export default function App() {
 
     try {
       const createdLead = await createLead({
-        name: leadForm.name?.trim() || "",
+        name: leadForm.name?.trim() || "Клиент",
         contact: normalizedContact,
         niche: quizAnswers?.hasWebsite ? null : quizAnswers?.niche?.trim() || null,
         websiteUrl: quizAnswers?.hasWebsite ? leadForm.site?.trim() || null : null,
