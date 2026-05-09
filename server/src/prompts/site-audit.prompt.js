@@ -111,6 +111,8 @@ ${buildAlwaysRules()}
 - не делай выводов о сайте
 - не пиши "исправить сайт"
 - предлагай точку входа: лендинг, квиз-страницу, форму заявки, Telegram-бота или CRM только если это релевантно
+ - NEVER mention SEO, page speed, website UX, pages, or website forms in this mode
+ - Focus on sales process, lead handling, response speed, repeated purchases, client retention, analytics and automation
 Дай план создания простой точки входа: лендинг, квиз, форма заявки, аналитика, связка с Telegram/CRM по контексту.
 
 ФОКУС АНАЛИЗА ДЛЯ СЦЕНАРИЯ БЕЗ САЙТА:

@@ -117,11 +117,20 @@ function extractPreviewProblemItems(problemText) {
   return chunks.filter((line) => line.length > 20);
 }
 
-function enrichProblemPreview(text) {
+function enrichProblemPreview(text, { isBusinessMode = false, businessContext = "" } = {}) {
   const source = (text || "").replace(/\s+/g, " ").trim();
   if (!source) return "";
 
   const lower = source.toLowerCase();
+  const context = (businessContext || "").toLowerCase();
+
+  if (isBusinessMode && (context.includes("тг") || context.includes("telegram"))) {
+    return "Сейчас часть клиентов может теряться прямо в переписках: сообщения тонут, ответы задерживаются, а повторные обращения не фиксируются. Из-за этого сложнее масштабировать продажи и удерживать постоянных покупателей.";
+  }
+
+  if (isBusinessMode && (lower.includes("ручн") || lower.includes("обработ"))) {
+    return "Продажи завязаны на ручной обработке обращений: при росте потока часть клиентов может не дождаться ответа. Это снижает конверсию в оплату и создаёт нестабильность по заявкам.";
+  }
 
   if (lower.includes("аналитик")) {
     return "Сейчас сложно понять, какие действия реально приводят клиентов. Из-за этого часть времени и бюджета может уходить в каналы, которые не дают заявок, а точки роста остаются незаметными.";
@@ -140,10 +149,14 @@ function enrichProblemPreview(text) {
     return source;
   }
 
+  if (isBusinessMode) {
+    return `${source} Это снижает скорость обработки обращений и уменьшает долю клиентов, которые доходят до оплаты.`;
+  }
+
   return `${source} Это замедляет путь клиента к заявке и снижает долю обращений, которые доходят до оплаты.`;
 }
 
-function pickRecommendationPreview(cards) {
+function pickRecommendationPreview(cards, { isBusinessMode = false, businessContext = "" } = {}) {
   const recommendationCard = cards.find((card) => card.key === "recommendations");
   if (recommendationCard?.body) {
     const firstLine = recommendationCard.body
@@ -155,10 +168,41 @@ function pickRecommendationPreview(cards) {
     }
   }
 
+  const context = (businessContext || "").toLowerCase();
+  if (isBusinessMode && (context.includes("тг") || context.includes("telegram"))) {
+    return "Можно выстроить простой процесс обработки заявок в Telegram: фиксировать входящие обращения, быстро отвечать на типовые вопросы и не терять повторные покупки. Это помогает продавать стабильнее без резкого роста ручной работы.";
+  }
+
+  if (isBusinessMode) {
+    return "Можно сократить потери заявок через автоматическую обработку обращений, быстрые ответы и базовый учёт повторных касаний — такие изменения часто дают быстрый эффект без сложного внедрения.";
+  }
+
   return "Можно сократить потери заявок через автоматическую обработку обращений и быстрые ответы клиентам — такие изменения обычно дают эффект без полной переделки сайта.";
 }
 
-function buildPreUnlockPreview(cards) {
+function pickProblemTitle(problemText, index, { isBusinessMode = false } = {}) {
+  const source = (problemText || "").toLowerCase();
+  const siteTitles = [
+    "Где теряются заявки",
+    "Что снижает конверсию",
+    "Почему часть клиентов может уходить"
+  ];
+  const businessTitles = [
+    "Где теряются заявки",
+    "Что тормозит продажи",
+    "Что мешает повторным продажам"
+  ];
+
+  if (source.includes("повтор")) return "Что мешает повторным продажам";
+  if (source.includes("ответ") || source.includes("скорост")) return "Где теряется скорость ответа";
+  if (source.includes("конверс")) return "Что снижает конверсию";
+  if (source.includes("клиент") || source.includes("заяв")) return "Почему часть клиентов может уходить";
+
+  const fallback = isBusinessMode ? businessTitles : siteTitles;
+  return fallback[index] || fallback[fallback.length - 1];
+}
+
+function buildPreUnlockPreview(cards, { isBusinessMode = false, businessContext = "" } = {}) {
   const problemsCard = cards.find((card) => card.key === "problems");
   let problemItems = extractPreviewProblemItems(problemsCard?.body).slice(0, 2);
   if (problemItems.length === 0) {
@@ -169,14 +213,14 @@ function buildPreUnlockPreview(cards) {
   }
   const visibleCards = problemItems.map((item, index) => ({
     key: `preview-problem-${index + 1}`,
-    title: `Проблема ${index + 1}`,
-    body: enrichProblemPreview(item)
+    title: pickProblemTitle(item, index, { isBusinessMode }),
+    body: enrichProblemPreview(item, { isBusinessMode, businessContext })
   }));
 
   visibleCards.push({
     key: "preview-recommendation",
     title: "Что можно улучшить",
-    body: pickRecommendationPreview(cards)
+    body: pickRecommendationPreview(cards, { isBusinessMode, businessContext })
   });
 
   const usedBodies = new Set(problemItems);
@@ -375,6 +419,10 @@ export default function App() {
     contact: "",
     site: ""
   });
+  const isBusinessMode = quizAnswers?.hasWebsite === false;
+  const analysisModeSubtitle = isBusinessMode
+    ? "Найдём, где могут теряться клиенты и что мешает масштабировать продажи"
+    : "Найдём ошибки в UX, SEO и конверсии";
 
   const analysisSteps = useMemo(() => {
     const hasWebsite = Boolean(quizAnswers?.hasWebsite);
@@ -389,7 +437,14 @@ export default function App() {
   const fullAnalysis = useMemo(() => result?.analysis || FALLBACK_ANALYSIS_TEXT, [result]);
   const { typedText, isTyping } = useTypewriter(fullAnalysis, Boolean(result) && status === "success");
   const analysisCards = useMemo(() => splitAnalysisIntoCards(typedText), [typedText]);
-  const preUnlockPreview = useMemo(() => buildPreUnlockPreview(analysisCards), [analysisCards]);
+  const preUnlockPreview = useMemo(
+    () =>
+      buildPreUnlockPreview(analysisCards, {
+        isBusinessMode,
+        businessContext: quizAnswers?.niche || ""
+      }),
+    [analysisCards, isBusinessMode, quizAnswers?.niche]
+  );
   const visibleAnalysisCards = useMemo(
     () => (isFullAnalysisUnlocked ? analysisCards : preUnlockPreview.visibleCards),
     [analysisCards, isFullAnalysisUnlocked, preUnlockPreview.visibleCards]
@@ -767,7 +822,7 @@ export default function App() {
       <section className="shell">
         <header className="hero fade-in">
           <h1>Аудит бизнеса за 30 секунд</h1>
-          <p>Найдём ошибки в UX, SEO и конверсии</p>
+          <p>{analysisModeSubtitle}</p>
         </header>
 
         {!isQuizCompleted && <AnalyzerQuiz onComplete={onQuizComplete} />}
@@ -825,8 +880,16 @@ export default function App() {
                 </div>
                 <div className="analysis-lock-content">
                   <p className="analysis-lock-badge">🔒 Скрыто ещё {hiddenBlocksCount} блоков</p>
-                  <h3>Мы нашли ещё несколько критических ошибок, которые снижают конверсию сайта</h3>
-                  <p>В полном разборе покажем оставшиеся точки потери клиентов и какие изменения дадут самый быстрый эффект.</p>
+                  <h3>
+                    {isBusinessMode
+                      ? "Мы нашли ещё несколько мест, где могут теряться клиенты и заявки"
+                      : "Мы нашли ещё несколько критических ошибок, которые снижают конверсию сайта"}
+                  </h3>
+                  <p>
+                    {isBusinessMode
+                      ? "В полном разборе покажем, где теряются заявки, что мешает повторным продажам и какие изменения дадут самый быстрый эффект."
+                      : "В полном разборе покажем оставшиеся точки потери клиентов и какие изменения дадут самый быстрый эффект."}
+                  </p>
                   <button type="button" className="losses-cta" onClick={onUnlockAnalysis}>
                     Показать полный разбор
                   </button>
@@ -839,7 +902,11 @@ export default function App() {
             {!isFullAnalysisUnlocked && showLeadForm && !isUnlockLoading && (
               <section className="lead-form-wrap fade-slide-in">
                 <h3>Открыть полный разбор</h3>
-                <p>Мы нашли ещё несколько точек, которые могут влиять на количество заявок и повторных клиентов.</p>
+                <p>
+                  {isBusinessMode
+                    ? "Мы нашли ещё несколько мест, где могут теряться клиенты, заявки и повторные продажи."
+                    : "Мы нашли ещё несколько точек, которые могут влиять на количество заявок и повторных клиентов."}
+                </p>
 
                 <form className="lead-form" onSubmit={onLeadSubmit}>
                   <label>
@@ -912,7 +979,11 @@ export default function App() {
             {solutionStatus === "loading" && (
               <section className="plan-loading fade-slide-in">
                 <h3>Готовим план реализации</h3>
-                <p>Собираем ответы, анализ сайта и подбираем решение под ваш бизнес</p>
+                <p>
+                  {isBusinessMode
+                    ? "Собираем ответы и подбираем решение под ваши продажи и обработку клиентов"
+                    : "Собираем ответы, анализ сайта и подбираем решение под ваш бизнес"}
+                </p>
                 <div className="plan-loading-progress">
                   <span
                     className="plan-loading-progress-fill"
