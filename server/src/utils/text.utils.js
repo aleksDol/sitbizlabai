@@ -16,6 +16,17 @@ const BANNED_PHRASE_REPLACEMENTS = [
   { pattern: /прогрев аудитории/gi, replacement: "последовательная коммуникация" }
 ];
 
+const CONSULTING_SOFTEN_REPLACEMENTS = [
+  { pattern: /целевое действие/gi, replacement: "заявка" },
+  { pattern: /путь клиента/gi, replacement: "путь до заявки" },
+  { pattern: /конверсионный сценарий/gi, replacement: "сценарий заявки" },
+  { pattern: /конкурирующие элементы интерфейса/gi, replacement: "несколько кнопок и блоков" },
+  { pattern: /конкурирующие элементы/gi, replacement: "несколько кнопок и блоков" },
+  { pattern: /снижение доли обращений/gi, replacement: "часть людей может уйти без заявки" },
+  { pattern: /визуальная коммуникация/gi, replacement: "подача на экране" },
+  { pattern: /оптимизация взаимодействия/gi, replacement: "упрощение следующего шага" }
+];
+
 const REPETITIVE_TAIL_PATTERNS = [
   /(снижает|уменьшает)\s+(конверсию|количество\s+заявок|обращения|число\s+обращений)\.?$/i,
   /(теряются|теряется)\s+(заявки|клиенты|лиды)\.?$/i
@@ -24,6 +35,14 @@ const REPETITIVE_TAIL_PATTERNS = [
 function cleanupAiWording(text) {
   let next = text;
   for (const { pattern, replacement } of BANNED_PHRASE_REPLACEMENTS) {
+    next = next.replace(pattern, replacement);
+  }
+  return next;
+}
+
+function softenConsultingLanguage(text) {
+  let next = text;
+  for (const { pattern, replacement } of CONSULTING_SOFTEN_REPLACEMENTS) {
     next = next.replace(pattern, replacement);
   }
   return next;
@@ -93,6 +112,7 @@ export function applyAnalysisQualityChecks(text) {
   if (!source) return source;
 
   const cleaned = cleanupAiWording(source);
-  const deduped = dedupeInsightLines(cleaned);
+  const softened = softenConsultingLanguage(cleaned);
+  const deduped = dedupeInsightLines(softened);
   return polishRecommendationSection(deduped);
 }
