@@ -31,6 +31,7 @@ export async function analyzeSite(urlObject, analysisInput = null) {
   return {
     ...siteData,
     analysis: openAiResult.text,
+    preview: openAiResult.preview || null,
     warnings
   };
 }
@@ -41,6 +42,7 @@ export async function analyzeBusinessWithoutWebsite(analysisInput) {
   return {
     analyzedAt: new Date().toISOString(),
     analysis: openAiResult.text,
+    preview: openAiResult.preview || null,
     warnings: [openAiResult.warning].filter(Boolean)
   };
 }

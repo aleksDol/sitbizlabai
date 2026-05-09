@@ -361,6 +361,65 @@ function buildPreUnlockPreview(cards, { isBusinessMode = false, businessContext 
   };
 }
 
+function validateServerPreview(preview) {
+  if (!preview || typeof preview !== "object") {
+    return false;
+  }
+
+  const problems = Array.isArray(preview.problems) ? preview.problems : [];
+  if (problems.length < 2) {
+    return false;
+  }
+
+  const normalizedProblems = problems.slice(0, 2).every((item) => {
+    const title = sanitizePreviewText(typeof item?.title === "string" ? item.title : "");
+    const text = sanitizePreviewText(typeof item?.text === "string" ? item.text : "");
+    return Boolean(title) && text.split(/\s+/).filter(Boolean).length >= 8;
+  });
+
+  if (!normalizedProblems) {
+    return false;
+  }
+
+  const recommendationText = sanitizePreviewText(
+    typeof preview?.recommendation?.text === "string" ? preview.recommendation.text : ""
+  );
+
+  return recommendationText.split(/\s+/).filter(Boolean).length >= 6;
+}
+
+function buildPreUnlockPreviewFromServer(preview, analysisCards) {
+  const problems = (Array.isArray(preview?.problems) ? preview.problems : []).slice(0, 2).map((item, index) => ({
+    key: `preview-problem-${index + 1}`,
+    title: sanitizePreviewText(item.title),
+    body: sanitizePreviewText(item.text).replace(/^проблема\s*:\s*/i, "")
+  }));
+
+  const recommendationTitle = sanitizePreviewText(preview?.recommendation?.title || "Что можно улучшить");
+  const recommendationText = sanitizePreviewText(preview?.recommendation?.text || "");
+
+  const visibleCards = [
+    ...problems,
+    {
+      key: "preview-recommendation",
+      title: recommendationTitle || "Что можно улучшить",
+      body: recommendationText
+    }
+  ];
+
+  const hiddenCards = Array.isArray(analysisCards) ? analysisCards.filter((card) => card.key !== "recommendations") : [];
+
+  return {
+    previewProblems: problems.map((item) => ({ title: item.title, text: item.body })),
+    previewRecommendation: {
+      title: recommendationTitle || "Что можно улучшить",
+      text: recommendationText
+    },
+    visibleCards,
+    hiddenCards
+  };
+}
+
 function extractProblemsForLosses(fullAnalysis) {
   const cards = splitAnalysisIntoCards(fullAnalysis);
   const problemsCard = cards.find((card) => card.key === "problems");
@@ -563,13 +622,18 @@ export default function App() {
   const fullAnalysis = useMemo(() => result?.analysis || FALLBACK_ANALYSIS_TEXT, [result]);
   const { typedText, isTyping } = useTypewriter(fullAnalysis, Boolean(result) && status === "success");
   const analysisCards = useMemo(() => splitAnalysisIntoCards(typedText), [typedText]);
+  const hasValidServerPreview = useMemo(() => validateServerPreview(result?.preview), [result?.preview]);
   const preUnlockPreview = useMemo(
-    () =>
-      buildPreUnlockPreview(analysisCards, {
+    () => {
+      if (hasValidServerPreview) {
+        return buildPreUnlockPreviewFromServer(result.preview, analysisCards);
+      }
+      return buildPreUnlockPreview(analysisCards, {
         isBusinessMode,
         businessContext: quizAnswers?.niche || ""
-      }),
-    [analysisCards, isBusinessMode, quizAnswers?.niche]
+      });
+    },
+    [analysisCards, hasValidServerPreview, isBusinessMode, quizAnswers?.niche, result]
   );
   const visibleAnalysisCards = useMemo(
     () => (isFullAnalysisUnlocked ? analysisCards : preUnlockPreview.visibleCards),
