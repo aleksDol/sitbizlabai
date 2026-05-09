@@ -10,8 +10,8 @@ import { HttpError } from "../utils/http-error.js";
 import { normalizeText, toArrayWithFallback } from "../utils/text.utils.js";
 import { detectPlatform } from "./platform-detector.service.js";
 
-const SITE_FETCH_RETRY_ATTEMPTS = 2;
-const SITE_FETCH_RETRY_DELAY_MS = 450;
+const SITE_FETCH_RETRY_ATTEMPTS = 3;
+const SITE_FETCH_RETRY_DELAY_MS = 700;
 
 function extractMainText($) {
   const cloned = $("body").clone();
@@ -21,7 +21,9 @@ function extractMainText($) {
 }
 
 function isRetryableSiteError(error) {
-  return ["ECONNABORTED", "ETIMEDOUT", "ECONNRESET"].includes(error?.code);
+  return ["ECONNABORTED", "ETIMEDOUT", "ECONNRESET", "EAI_AGAIN", "ENETUNREACH", "ECONNREFUSED"].includes(
+    error?.code
+  );
 }
 
 function isProtectedSiteResponse(error) {
@@ -48,7 +50,13 @@ async function fetchHtml(url) {
       const response = await axios.get(url, {
         timeout: REQUEST_TIMEOUT_MS,
         maxRedirects: 5,
-        headers: { "User-Agent": SITE_FETCH_USER_AGENT }
+        headers: {
+          "User-Agent": SITE_FETCH_USER_AGENT,
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "ru,en-US;q=0.9,en;q=0.8",
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache"
+        }
       });
 
       if (typeof response.data !== "string" || response.data.trim() === "") {
@@ -62,7 +70,8 @@ async function fetchHtml(url) {
       }
 
       if (isProtectedSiteResponse(error)) {
-        throw new HttpError(429, ERROR_CODES.SITE_PROTECTED, ERROR_MESSAGES.SITE_PROTECTED);
+        lastError = error;
+        break;
       }
 
       lastError = error;
@@ -75,11 +84,46 @@ async function fetchHtml(url) {
     }
   }
 
-  if (lastError?.code === "ECONNABORTED") {
+  const fallbackHtml = await fetchFallbackHtml(url);
+  if (fallbackHtml) {
+    return fallbackHtml;
+  }
+
+  if (isProtectedSiteResponse(lastError)) {
+    throw new HttpError(429, ERROR_CODES.SITE_PROTECTED, ERROR_MESSAGES.SITE_PROTECTED);
+  }
+
+  if (lastError?.code === "ECONNABORTED" || lastError?.code === "ETIMEDOUT") {
     throw new HttpError(504, ERROR_CODES.SITE_TIMEOUT, ERROR_MESSAGES.SITE_TIMEOUT);
   }
 
   throw new HttpError(502, ERROR_CODES.SITE_UNAVAILABLE, ERROR_MESSAGES.SITE_UNAVAILABLE);
+}
+
+async function fetchFallbackHtml(url) {
+  try {
+    const response = await axios.get(`https://r.jina.ai/${url}`, {
+      timeout: REQUEST_TIMEOUT_MS,
+      maxRedirects: 3,
+      headers: {
+        "User-Agent": SITE_FETCH_USER_AGENT,
+        Accept: "text/plain,text/html;q=0.9,*/*;q=0.8"
+      }
+    });
+
+    const text = typeof response.data === "string" ? response.data.trim() : "";
+    if (!text) {
+      return null;
+    }
+
+    // Reader proxy may return plain text/markdown. Wrap into minimal HTML for downstream parser.
+    return `<!doctype html><html><head><title>Fallback content</title></head><body>${text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")}</body></html>`;
+  } catch {
+    return null;
+  }
 }
 
 export async function parseWebsite(urlObject) {
