@@ -1058,68 +1058,61 @@ export default function App() {
             ))}
 
             {!isFullAnalysisUnlocked && hiddenBlocksCount > 0 && (
-              <section className="analysis-lock-card">
-                <div className="analysis-fade-overlay" />
-                <div className="analysis-blurred-preview">
-                  {hiddenAnalysisCards.slice(0, 2).map((card) => (
-                    <div key={`hidden-${card.title}`} className="blurred-card-row">
-                      <strong>{card.title}</strong>
-                      <span>{card.body.slice(0, 120)}...</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="analysis-lock-content">
-                  <p className="analysis-lock-badge">🔒 Скрыто ещё {hiddenBlocksCount} блоков</p>
-                  <h3>
-                    {isBusinessMode
-                      ? "Мы нашли ещё несколько мест, где могут теряться клиенты и заявки"
-                      : "Мы нашли ещё несколько критических ошибок, которые снижают конверсию сайта"}
-                  </h3>
-                  <p>
-                    {isBusinessMode
-                      ? "В полном разборе покажем, где теряются заявки, что мешает повторным продажам и какие изменения дадут самый быстрый эффект."
-                      : "В полном разборе покажем оставшиеся точки потери клиентов и какие изменения дадут самый быстрый эффект."}
-                  </p>
-                  <button type="button" className="losses-cta" onClick={onUnlockAnalysis}>
-                    Показать полный разбор
-                  </button>
-                </div>
+              <section className="preunlock-flow fade-slide-in">
+                <section className="analysis-lock-card">
+                  <div className="analysis-lock-content">
+                    <p className="analysis-lock-badge">🔥 Скрыто ещё {hiddenBlocksCount} полезных блока</p>
+                    <h3>
+                      Мы нашли ещё несколько мест, где может теряться часть заявок и рекламного бюджета
+                    </h3>
+                    <ul className="analysis-teaser-list">
+                      <li>почему часть трафика не доходит до обращения</li>
+                      <li>где пользователь теряет интерес</li>
+                      <li>что мешает повторным заявкам</li>
+                      <li>какие изменения дадут самый быстрый эффект</li>
+                    </ul>
+                  </div>
+                </section>
+
+                {!isUnlockLoading && (
+                  <section className="lead-form-wrap">
+                    <h3>Открыть полный разбор</h3>
+                    <p>
+                      {isBusinessMode
+                        ? "Мы нашли ещё несколько мест, где могут теряться клиенты, заявки и повторные продажи."
+                        : "Мы нашли ещё несколько точек, которые могут влиять на количество заявок и повторных клиентов."}
+                    </p>
+
+                    <form className="lead-form" onSubmit={onLeadSubmit}>
+                      <label>
+                        Telegram или телефон
+                        <input
+                          type="text"
+                          value={leadForm.contact}
+                          onChange={(event) => onLeadFieldChange("contact", event.target.value)}
+                          placeholder="@username или телефон"
+                          required
+                        />
+                      </label>
+
+                      <button type="submit" className="lead-submit-btn">
+                        {leadSubmitting
+                          ? "Отправляем..."
+                          : isBusinessMode
+                            ? "Показать полный разбор продаж"
+                            : "Показать где теряются заявки"}
+                      </button>
+                    </form>
+
+                    {leadSubmitError && <p className="lead-error">{leadSubmitError}</p>}
+                  </section>
+                )}
               </section>
             )}
 
             {isTyping && <span className="typing-cursor">|</span>}
 
-            {!isFullAnalysisUnlocked && showLeadForm && !isUnlockLoading && (
-              <section className="lead-form-wrap fade-slide-in">
-                <h3>Открыть полный разбор</h3>
-                <p>
-                  {isBusinessMode
-                    ? "Мы нашли ещё несколько мест, где могут теряться клиенты, заявки и повторные продажи."
-                    : "Мы нашли ещё несколько точек, которые могут влиять на количество заявок и повторных клиентов."}
-                </p>
-
-                <form className="lead-form" onSubmit={onLeadSubmit}>
-                  <label>
-                    Telegram или телефон
-                    <input
-                      type="text"
-                      value={leadForm.contact}
-                      onChange={(event) => onLeadFieldChange("contact", event.target.value)}
-                      placeholder="@username или телефон"
-                      required
-                    />
-                  </label>
-
-                  <button type="submit" className="lead-submit-btn">
-                    {leadSubmitting ? "Отправляем..." : "Показать полный анализ"}
-                  </button>
-                </form>
-
-                {leadSubmitError && <p className="lead-error">{leadSubmitError}</p>}
-              </section>
-            )}
-
-            {!isFullAnalysisUnlocked && showLeadForm && isUnlockLoading && (
+            {!isFullAnalysisUnlocked && hiddenBlocksCount > 0 && isUnlockLoading && (
               <section className="unlock-loading-wrap fade-slide-in" aria-live="polite">
                 {UNLOCK_LOADING_STEPS.map((step, index) => (
                   <p key={step} className={`unlock-loading-step ${index <= unlockLoadingStepIndex ? "visible" : ""}`}>
