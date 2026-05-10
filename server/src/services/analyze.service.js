@@ -16,7 +16,10 @@ export async function analyzeSite(urlObject, analysisInput = null) {
           niche: analysisInput.niche || null,
           hasWebsite: analysisInput.hasWebsite === true,
           channels: Array.isArray(analysisInput.channels) ? analysisInput.channels : [],
-          hasRepeatSales: analysisInput.hasRepeatSales || "unknown"
+          hasRepeatSales: analysisInput.hasRepeatSales || "unknown",
+          trafficSource: analysisInput.trafficSource || null,
+          mainGoal: analysisInput.mainGoal || null,
+          contact: analysisInput.contact || null
         }
       : null,
     performance_score: pageSpeedResult.metrics.performance_score,

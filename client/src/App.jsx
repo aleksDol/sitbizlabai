@@ -590,24 +590,16 @@ export default function App() {
   const [planCardsVisible, setPlanCardsVisible] = useState(false);
   const [solutionError, setSolutionError] = useState("");
 
-  const [showLeadForm, setShowLeadForm] = useState(false);
   const [leadSubmitting, setLeadSubmitting] = useState(false);
   const [leadSubmitError, setLeadSubmitError] = useState("");
-  const [isFullAnalysisUnlocked, setIsFullAnalysisUnlocked] = useState(false);
+  const [isFullAnalysisUnlocked, setIsFullAnalysisUnlocked] = useState(true);
   const [isUnlockLoading, setIsUnlockLoading] = useState(false);
   const [unlockLoadingStepIndex, setUnlockLoadingStepIndex] = useState(0);
   const [leadId, setLeadId] = useState(null);
   const [finalCtaStatus, setFinalCtaStatus] = useState("idle");
   const [finalCtaError, setFinalCtaError] = useState("");
-  const [leadForm, setLeadForm] = useState({
-    name: "",
-    contact: "",
-    site: ""
-  });
-  const isBusinessMode = quizAnswers?.hasWebsite === false;
-  const analysisModeSubtitle = isBusinessMode
-    ? "Найдём, где могут теряться клиенты и что мешает масштабировать продажи"
-    : "Найдём ошибки в UX, SEO и конверсии";
+  const isBusinessMode = false;
+  const analysisModeSubtitle = "Найдём ошибки в UX, SEO и конверсии";
 
   const analysisSteps = useMemo(() => {
     const hasWebsite = Boolean(quizAnswers?.hasWebsite);
@@ -674,8 +666,7 @@ export default function App() {
     setFinalCtaError("");
 
     if (!preserveLead) {
-      setShowLeadForm(false);
-      setLeadForm({ name: "", contact: "", site: "" });
+      setLeadSubmitError("");
     }
   }
 
@@ -740,7 +731,10 @@ export default function App() {
       websiteUrl: quizAnswers.hasWebsite ? quizAnswers.websiteUrl || null : null,
       hasWebsite: quizAnswers.hasWebsite,
       channels: Array.isArray(quizAnswers.acquisitionChannels) ? quizAnswers.acquisitionChannels : [],
-      hasRepeatSales: quizAnswers.hasRepeatSales || "unknown"
+      hasRepeatSales: quizAnswers.hasRepeatSales || "unknown",
+      trafficSource: quizAnswers.clientSource || null,
+      mainGoal: quizAnswers.mainGoal || null,
+      contact: quizAnswers.contact || null
     };
   }
 
@@ -753,7 +747,7 @@ export default function App() {
     setLossesStatus("idle");
     setLossesText("");
     setLossesError("");
-    setIsFullAnalysisUnlocked(false);
+    setIsFullAnalysisUnlocked(true);
 
     resetFinalStages();
 
@@ -790,12 +784,67 @@ export default function App() {
       websiteUrl: answers.hasWebsite ? answers.websiteUrl || null : null,
       hasWebsite: Boolean(answers.hasWebsite),
       channels: Array.isArray(answers.acquisitionChannels) ? answers.acquisitionChannels : [],
-      hasRepeatSales: answers.hasRepeatSales || "unknown"
+      hasRepeatSales: answers.hasRepeatSales || "unknown",
+      trafficSource: answers.clientSource || null,
+      mainGoal: answers.mainGoal || null,
+      contact: answers.contact || null
     };
+
+    const normalizedContact = answers.contact?.trim() || "";
+    if (!isValidPhone(normalizedContact) && !isValidTelegramUsername(normalizedContact)) {
+      setLeadSubmitError("Укажите телефон или Telegram-ник (например, +79991234567 или @username).");
+      return;
+    }
+
+    if (leadSubmitting) {
+      return;
+    }
+
+    setLeadSubmitting(true);
+    setLeadSubmitError("");
+
+    try {
+      const createdLead = await createLead({
+        name: "Клиент",
+        contact: normalizedContact,
+        niche: null,
+        websiteUrl: answers.websiteUrl || null,
+        hasWebsite: true,
+        channels: Array.isArray(answers.acquisitionChannels) ? answers.acquisitionChannels : [],
+        leadsPerMonth: null,
+        detectedPlatform: null,
+        analysisText: null,
+        lossesText: null,
+        solutionOfferText: null,
+        siteType: null,
+        hasRepeatSales: null,
+        trafficSources:
+          Array.isArray(answers.acquisitionChannels) && answers.acquisitionChannels.length > 1
+            ? "multiple"
+            : "single"
+      });
+
+      const createdLeadId = createdLead?.id || null;
+      setLeadId(createdLeadId);
+      if (createdLeadId && typeof window !== "undefined") {
+        window.localStorage.setItem("leadId", createdLeadId);
+      }
+      trackLeadFormSubmitted({
+        hasWebsite: true,
+        channelsCount: Array.isArray(answers.acquisitionChannels) ? answers.acquisitionChannels.length : 0
+      });
+    } catch (err) {
+      setLeadSubmitError(
+        err instanceof Error && err.message ? err.message : "Не удалось отправить заявку. Попробуйте ещё раз."
+      );
+      setLeadSubmitting(false);
+      return;
+    }
 
     setQuizAnswers(answers);
     setIsQuizCompleted(true);
     await runAnalysis(nextAnalysisInput);
+    setLeadSubmitting(false);
   }
 
   async function onEstimateLosses() {
@@ -859,7 +908,6 @@ export default function App() {
     setSolutionPlanCards([]);
     setIsSolutionTypingDone(false);
     setSolutionError("");
-    setShowLeadForm(false);
     const startedAt = Date.now();
 
     try {
@@ -891,94 +939,6 @@ export default function App() {
       setSolutionStatus("error");
       setSolutionError(getFriendlyErrorMessage(err));
     }
-  }
-
-  function onOpenLeadForm() {
-    setShowLeadForm(true);
-    setLeadSubmitting(false);
-    setLeadSubmitError("");
-    setLeadForm((prev) => ({
-      ...prev,
-      site: quizAnswers?.hasWebsite ? quizAnswers?.websiteUrl || "" : ""
-    }));
-  }
-
-  function onLeadFieldChange(field, value) {
-    setLeadForm((prev) => ({
-      ...prev,
-      [field]: value
-    }));
-  }
-
-  async function onLeadSubmit(event) {
-    event.preventDefault();
-    const normalizedContact = leadForm.contact?.trim() || "";
-    if (!isValidPhone(normalizedContact) && !isValidTelegramUsername(normalizedContact)) {
-      setLeadSubmitError("Укажите телефон или Telegram-ник (например, +79991234567 или @username).");
-      return;
-    }
-
-    setLeadSubmitting(true);
-    setLeadSubmitError("");
-
-    try {
-      const createdLead = await createLead({
-        name: leadForm.name?.trim() || "Клиент",
-        contact: normalizedContact,
-        niche: quizAnswers?.hasWebsite ? null : quizAnswers?.niche?.trim() || null,
-        websiteUrl: quizAnswers?.hasWebsite ? leadForm.site?.trim() || null : null,
-        hasWebsite: typeof quizAnswers?.hasWebsite === "boolean" ? quizAnswers.hasWebsite : null,
-        channels: Array.isArray(quizAnswers?.acquisitionChannels) ? quizAnswers.acquisitionChannels : [],
-        leadsPerMonth: null,
-        detectedPlatform: quizAnswers?.hasWebsite ? result?.detectedPlatform?.platform || null : null,
-        analysisText: fullAnalysis?.trim() || null,
-        lossesText: lossesText?.trim() || null,
-        solutionOfferText: solutionOfferText?.trim() || null,
-        siteType: selectedSiteType || null,
-        hasRepeatSales:
-          quizAnswers?.hasRepeatSales === "yes"
-            ? true
-            : quizAnswers?.hasRepeatSales === "no"
-              ? false
-              : null,
-        trafficSources:
-          Array.isArray(quizAnswers?.acquisitionChannels) && quizAnswers.acquisitionChannels.length > 1
-            ? "multiple"
-            : "single"
-      });
-
-      const createdLeadId = createdLead?.id || null;
-      setLeadId(createdLeadId);
-      if (createdLeadId && typeof window !== "undefined") {
-        window.localStorage.setItem("leadId", createdLeadId);
-      }
-      setIsUnlockLoading(true);
-      await wait(1800);
-      setIsUnlockLoading(false);
-      if (!isFullAnalysisUnlocked) {
-        setIsFullAnalysisUnlocked(true);
-        if (lossesStatus === "idle") {
-          await onEstimateLosses();
-        }
-      }
-      trackLeadFormSubmitted({
-        hasWebsite: Boolean(quizAnswers?.hasWebsite),
-        niche: quizAnswers?.niche || "",
-        channelsCount: Array.isArray(quizAnswers?.acquisitionChannels)
-          ? quizAnswers.acquisitionChannels.length
-          : 0
-      });
-    } catch (err) {
-      setLeadSubmitError(
-        err instanceof Error && err.message ? err.message : "Не удалось отправить заявку. Попробуйте ещё раз."
-      );
-    } finally {
-      setLeadSubmitting(false);
-    }
-  }
-
-  function onUnlockAnalysis() {
-    onOpenLeadForm();
   }
 
   async function onFinalCtaClick() {
@@ -1016,6 +976,11 @@ export default function App() {
         </header>
 
         {!isQuizCompleted && <AnalyzerQuiz onComplete={onQuizComplete} />}
+        {!isQuizCompleted && leadSubmitError && (
+          <section className="error-box fade-in delay-2">
+            <p>{leadSubmitError}</p>
+          </section>
+        )}
 
         {isQuizCompleted && (
           <section className="quiz-summary fade-slide-in">
@@ -1056,59 +1021,6 @@ export default function App() {
                 <p>{card.body}</p>
               </article>
             ))}
-
-            {!isFullAnalysisUnlocked && hiddenBlocksCount > 0 && (
-              <section className="preunlock-flow fade-slide-in">
-                <section className="analysis-lock-card">
-                  <div className="analysis-lock-content">
-                    <p className="analysis-lock-badge">🔥 Скрыто ещё {hiddenBlocksCount} полезных блока</p>
-                    <h3>
-                      Мы нашли ещё несколько мест, где может теряться часть заявок и рекламного бюджета
-                    </h3>
-                    <ul className="analysis-teaser-list">
-                      <li>почему часть трафика не доходит до обращения</li>
-                      <li>где пользователь теряет интерес</li>
-                      <li>что мешает повторным заявкам</li>
-                      <li>какие изменения дадут самый быстрый эффект</li>
-                    </ul>
-                  </div>
-                </section>
-
-                {!isUnlockLoading && (
-                  <section className="lead-form-wrap">
-                    <h3>Открыть полный разбор</h3>
-                    <p>
-                      {isBusinessMode
-                        ? "Мы нашли ещё несколько мест, где могут теряться клиенты, заявки и повторные продажи."
-                        : "Мы нашли ещё несколько точек, которые могут влиять на количество заявок и повторных клиентов."}
-                    </p>
-
-                    <form className="lead-form" onSubmit={onLeadSubmit}>
-                      <label>
-                        Telegram или телефон
-                        <input
-                          type="text"
-                          value={leadForm.contact}
-                          onChange={(event) => onLeadFieldChange("contact", event.target.value)}
-                          placeholder="@username или телефон"
-                          required
-                        />
-                      </label>
-
-                      <button type="submit" className="lead-submit-btn">
-                        {leadSubmitting
-                          ? "Отправляем..."
-                          : isBusinessMode
-                            ? "Показать полный разбор продаж"
-                            : "Показать где теряются заявки"}
-                      </button>
-                    </form>
-
-                    {leadSubmitError && <p className="lead-error">{leadSubmitError}</p>}
-                  </section>
-                )}
-              </section>
-            )}
 
             {isTyping && <span className="typing-cursor">|</span>}
 

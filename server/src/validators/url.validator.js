@@ -34,6 +34,9 @@ export function validateAnalysisInput(payload) {
     : [];
   const hasRepeatSales =
     typeof payload?.hasRepeatSales === "string" ? payload.hasRepeatSales.trim() : "unknown";
+  const trafficSource = typeof payload?.trafficSource === "string" ? payload.trafficSource.trim() : null;
+  const mainGoal = typeof payload?.mainGoal === "string" ? payload.mainGoal.trim() : null;
+  const contact = typeof payload?.contact === "string" ? payload.contact.trim() : null;
 
   if (nicheRaw !== null && nicheRaw !== undefined && typeof nicheRaw !== "string") {
     throw new HttpError(400, ERROR_CODES.INVALID_BODY, "Поле niche должно быть строкой или null.");
@@ -67,9 +70,10 @@ export function validateAnalysisInput(payload) {
     websiteUrl: hasWebsite ? websiteUrl : null,
     hasWebsite,
     channels,
-    hasRepeatSales: ["yes", "no", "unknown"].includes(hasRepeatSales)
-      ? hasRepeatSales
-      : "unknown"
+    hasRepeatSales: ["yes", "no", "unknown"].includes(hasRepeatSales) ? hasRepeatSales : "unknown",
+    trafficSource: trafficSource || null,
+    mainGoal: mainGoal || null,
+    contact: contact || null
   };
 }
 

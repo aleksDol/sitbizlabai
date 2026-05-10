@@ -63,7 +63,11 @@ export async function lossesController(req, res, next) {
               ? inputPayload.channels.filter((item) => typeof item === "string")
               : [],
             hasRepeatSales:
-              typeof inputPayload.hasRepeatSales === "string" ? inputPayload.hasRepeatSales : "unknown"
+              typeof inputPayload.hasRepeatSales === "string" ? inputPayload.hasRepeatSales : "unknown",
+            trafficSource:
+              typeof inputPayload.trafficSource === "string" ? inputPayload.trafficSource.trim() : null,
+            mainGoal: typeof inputPayload.mainGoal === "string" ? inputPayload.mainGoal.trim() : null,
+            contact: typeof inputPayload.contact === "string" ? inputPayload.contact.trim() : null
           }
         : null;
 
