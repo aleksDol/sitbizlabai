@@ -43,44 +43,60 @@ function wait(ms) {
 }
 
 async function fetchHtml(url) {
+  const candidateUrls = [];
+  candidateUrls.push(url);
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "https:") {
+      candidateUrls.push(`http://${parsed.host}${parsed.pathname}${parsed.search}`);
+    } else if (parsed.protocol === "http:") {
+      candidateUrls.push(`https://${parsed.host}${parsed.pathname}${parsed.search}`);
+    }
+  } catch {
+    // Keep original URL only.
+  }
+
+  const uniqueCandidateUrls = [...new Set(candidateUrls)];
   let lastError = null;
 
-  for (let attempt = 1; attempt <= SITE_FETCH_RETRY_ATTEMPTS; attempt += 1) {
-    try {
-      const response = await axios.get(url, {
-        timeout: REQUEST_TIMEOUT_MS,
-        maxRedirects: 5,
-        headers: {
-          "User-Agent": SITE_FETCH_USER_AGENT,
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "ru,en-US;q=0.9,en;q=0.8",
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache"
+  for (const candidateUrl of uniqueCandidateUrls) {
+    for (let attempt = 1; attempt <= SITE_FETCH_RETRY_ATTEMPTS; attempt += 1) {
+      try {
+        const response = await axios.get(candidateUrl, {
+          timeout: REQUEST_TIMEOUT_MS,
+          maxRedirects: 5,
+          headers: {
+            "User-Agent": SITE_FETCH_USER_AGENT,
+            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "ru,en-US;q=0.9,en;q=0.8",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache"
+          }
+        });
+
+        if (typeof response.data !== "string" || response.data.trim() === "") {
+          throw new HttpError(502, ERROR_CODES.SITE_UNAVAILABLE, ERROR_MESSAGES.SITE_EMPTY_CONTENT);
         }
-      });
 
-      if (typeof response.data !== "string" || response.data.trim() === "") {
-        throw new HttpError(502, ERROR_CODES.SITE_UNAVAILABLE, ERROR_MESSAGES.SITE_EMPTY_CONTENT);
-      }
+        return response.data;
+      } catch (error) {
+        if (error instanceof HttpError) {
+          throw error;
+        }
 
-      return response.data;
-    } catch (error) {
-      if (error instanceof HttpError) {
-        throw error;
-      }
+        if (isProtectedSiteResponse(error)) {
+          lastError = error;
+          break;
+        }
 
-      if (isProtectedSiteResponse(error)) {
         lastError = error;
+        if (attempt < SITE_FETCH_RETRY_ATTEMPTS && isRetryableSiteError(error)) {
+          await wait(SITE_FETCH_RETRY_DELAY_MS * attempt);
+          continue;
+        }
+
         break;
       }
-
-      lastError = error;
-      if (attempt < SITE_FETCH_RETRY_ATTEMPTS && isRetryableSiteError(error)) {
-        await wait(SITE_FETCH_RETRY_DELAY_MS * attempt);
-        continue;
-      }
-
-      break;
     }
   }
 

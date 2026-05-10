@@ -738,7 +738,7 @@ export default function App() {
     };
   }
 
-  async function runAnalysis(analysisInputOverride = null) {
+  async function runAnalysis(analysisInputOverride = null, leadIdOverride = null) {
     setError("");
     setResult(null);
     setWarnings([]);
@@ -764,6 +764,32 @@ export default function App() {
       setResult(siteData);
       setWarnings(Array.isArray(siteData?.warnings) ? siteData.warnings : []);
       setStatus("success");
+
+      const leadIdToUpdate = leadIdOverride || leadId;
+      if (leadIdToUpdate) {
+        try {
+          await updateLead(leadIdToUpdate, {
+            niche: analysisInput?.hasWebsite ? null : analysisInput?.niche || null,
+            websiteUrl: analysisInput?.hasWebsite ? analysisInput?.websiteUrl || null : null,
+            hasWebsite: typeof analysisInput?.hasWebsite === "boolean" ? analysisInput.hasWebsite : null,
+            channels: Array.isArray(analysisInput?.channels) ? analysisInput.channels : [],
+            detectedPlatform: analysisInput?.hasWebsite ? siteData?.detectedPlatform?.platform || null : null,
+            analysisText: typeof siteData?.analysis === "string" ? siteData.analysis.trim() : null,
+            hasRepeatSales:
+              analysisInput?.hasRepeatSales === "yes"
+                ? true
+                : analysisInput?.hasRepeatSales === "no"
+                  ? false
+                  : null,
+            trafficSources:
+              Array.isArray(analysisInput?.channels) && analysisInput.channels.length > 1
+                ? "multiple"
+                : "single"
+          });
+        } catch {
+          // Lead sync should not block the user flow.
+        }
+      }
     } catch (err) {
       stopProgress();
       setError(getFriendlyErrorMessage(err));
@@ -802,6 +828,7 @@ export default function App() {
 
     setLeadSubmitting(true);
     setLeadSubmitError("");
+    let createdLeadId = null;
 
     try {
       const createdLead = await createLead({
@@ -824,7 +851,7 @@ export default function App() {
             : "single"
       });
 
-      const createdLeadId = createdLead?.id || null;
+      createdLeadId = createdLead?.id || null;
       setLeadId(createdLeadId);
       if (createdLeadId && typeof window !== "undefined") {
         window.localStorage.setItem("leadId", createdLeadId);
@@ -843,7 +870,7 @@ export default function App() {
 
     setQuizAnswers(answers);
     setIsQuizCompleted(true);
-    await runAnalysis(nextAnalysisInput);
+    await runAnalysis(nextAnalysisInput, createdLeadId);
     setLeadSubmitting(false);
   }
 

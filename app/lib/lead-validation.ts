@@ -197,6 +197,17 @@ export type UpdateLeadInput = {
   isInterested?: boolean;
   clickedFinalCTA?: boolean;
   intent?: "low" | "medium" | "high" | null;
+  niche?: string | null;
+  websiteUrl?: string | null;
+  hasWebsite?: boolean | null;
+  channels?: string[];
+  detectedPlatform?: string | null;
+  analysisText?: string | null;
+  lossesText?: string | null;
+  solutionOfferText?: string | null;
+  siteType?: string | null;
+  hasRepeatSales?: boolean | null;
+  trafficSources?: string | null;
 };
 
 export function validateUpdateLeadPayload(payload: unknown): ValidationResult<UpdateLeadInput> {
@@ -250,6 +261,109 @@ export function validateUpdateLeadPayload(payload: unknown): ValidationResult<Up
       data.intent = payload.intent as "low" | "medium" | "high";
     } else {
       errors.push("Field 'intent' must be one of: low, medium, high, or null.");
+    }
+  }
+
+  if (payload.niche !== undefined) {
+    const niche = normalizeOptionalString(payload.niche);
+    if (niche === undefined) {
+      errors.push("Field 'niche' must be a string or null.");
+    } else {
+      data.niche = niche;
+    }
+  }
+
+  if (payload.websiteUrl !== undefined) {
+    const websiteUrl = normalizeOptionalString(payload.websiteUrl);
+    if (websiteUrl === undefined) {
+      errors.push("Field 'websiteUrl' must be a string or null.");
+    } else {
+      data.websiteUrl = websiteUrl;
+    }
+  }
+
+  if (payload.hasWebsite !== undefined) {
+    const hasWebsite = normalizeOptionalBoolean(payload.hasWebsite);
+    if (hasWebsite === undefined) {
+      errors.push("Field 'hasWebsite' must be a boolean or null.");
+    } else {
+      data.hasWebsite = hasWebsite;
+    }
+  }
+
+  if (payload.channels !== undefined) {
+    const channelsRaw = payload.channels;
+    const channels =
+      Array.isArray(channelsRaw) && channelsRaw.every((item) => typeof item === "string")
+        ? channelsRaw.map((item) => item.trim()).filter(Boolean)
+        : undefined;
+    if (channels === undefined) {
+      errors.push("Field 'channels' must be an array of strings.");
+    } else {
+      data.channels = channels;
+    }
+  }
+
+  if (payload.detectedPlatform !== undefined) {
+    const detectedPlatform = normalizeOptionalString(payload.detectedPlatform);
+    if (detectedPlatform === undefined) {
+      errors.push("Field 'detectedPlatform' must be a string or null.");
+    } else {
+      data.detectedPlatform = detectedPlatform;
+    }
+  }
+
+  if (payload.analysisText !== undefined) {
+    const analysisText = normalizeOptionalString(payload.analysisText);
+    if (analysisText === undefined) {
+      errors.push("Field 'analysisText' must be a string or null.");
+    } else {
+      data.analysisText = analysisText;
+    }
+  }
+
+  if (payload.lossesText !== undefined) {
+    const lossesText = normalizeOptionalString(payload.lossesText);
+    if (lossesText === undefined) {
+      errors.push("Field 'lossesText' must be a string or null.");
+    } else {
+      data.lossesText = lossesText;
+    }
+  }
+
+  if (payload.solutionOfferText !== undefined) {
+    const solutionOfferText = normalizeOptionalString(payload.solutionOfferText);
+    if (solutionOfferText === undefined) {
+      errors.push("Field 'solutionOfferText' must be a string or null.");
+    } else {
+      data.solutionOfferText = solutionOfferText;
+    }
+  }
+
+  if (payload.siteType !== undefined) {
+    const siteType = normalizeOptionalString(payload.siteType);
+    if (siteType === undefined) {
+      errors.push("Field 'siteType' must be a string or null.");
+    } else {
+      data.siteType = siteType;
+    }
+  }
+
+  if (payload.hasRepeatSales !== undefined) {
+    const hasRepeatSales = normalizeOptionalBoolean(payload.hasRepeatSales);
+    if (hasRepeatSales === undefined) {
+      errors.push("Field 'hasRepeatSales' must be a boolean or null.");
+    } else {
+      data.hasRepeatSales = hasRepeatSales;
+    }
+  }
+
+  if (payload.trafficSources !== undefined) {
+    const trafficSources = normalizeOptionalString(payload.trafficSources);
+    if (trafficSources === undefined) {
+      errors.push("Field 'trafficSources' must be a string or null.");
+    } else {
+      data.trafficSources = trafficSources;
     }
   }
 
