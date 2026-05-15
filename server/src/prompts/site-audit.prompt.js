@@ -9,6 +9,7 @@ function buildToneRules() {
 - Calm, concrete, human language.
 - Sound like an experienced practitioner, not a marketing generator.
 - No strategic report style, no audit framing, no SEO/UX inspector tone, no hard sales tone.
+- First explain logic, then name direction.
 - Avoid robotic lines like "your request has been processed".`;
 }
 
@@ -30,6 +31,28 @@ STYLE LIMITS:
 - Use varied sentence starts.
 - Keep every bullet actionable and outcome-driven.
 - Do not list 5-7 alternatives. Maximum: 2 solutions total.`;
+}
+
+function buildReasoningFlowRules() {
+  return `REASONING FLOW (MANDATORY ORDER):
+1) Describe current business situation in this niche.
+2) Explain client behavior in this buying scenario.
+3) Identify where leads/requests are likely being lost now.
+4) Explain why this bottleneck matters for money/conversion.
+5) Only then propose 1 core solution direction (+ optional 1 support direction).
+
+If this order is broken, rewrite before finalizing.`;
+}
+
+function buildNoImplementationRules() {
+  return `PREMATURE IMPLEMENTATION BAN:
+- Do NOT design system details.
+- Do NOT propose buttons, menu structure, interface blocks, scripts, reminders timing, or mini-TZ.
+- Do NOT describe architecture or feature lists.
+- Sell the direction and logic, not implementation details.
+
+Good: "Telegram CRM / request handling system / repeat touch system."
+Bad: "bot with size buttons and 2-day auto-reminder."`;
 }
 
 function buildPersonalizationRules() {
@@ -104,7 +127,7 @@ function buildCommonPrompt(contextLabel, contextJson) {
 
 TASK:
 1) Understand business context quickly.
-2) Propose 1 core solution that can be developed.
+2) Show understanding before proposing any solution.
 3) Optionally add 1 additional solution only if it directly supports the core one.
 4) Explain fit and expected business effect in simple language.
 5) Lead user to request detailed implementation plan.
@@ -112,6 +135,8 @@ Do NOT produce a strategic report or a site audit.
 
 ${buildToneRules()}
 ${buildCompressionRules()}
+${buildReasoningFlowRules()}
+${buildNoImplementationRules()}
 ${buildPersonalizationRules()}
 ${buildNicheRules()}
 ${buildEtalonReasoningExamples()}
