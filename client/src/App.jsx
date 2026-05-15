@@ -460,6 +460,24 @@ function splitTextBlocks(text) {
     .filter(Boolean);
 }
 
+function extractPitchOutcomeBullets(cards) {
+  const solutionsCard = cards.find((card) => card.key === "solutions");
+  const source = (solutionsCard?.body || "")
+    .split(/\n+/)
+    .map((line) => line.replace(/^[-*•\d.)\s]+/, "").trim())
+    .filter(Boolean);
+
+  const effectLines = source
+    .filter((line) => /даст|поможет|сниз|ускор|рост|меньше|выше|стабиль|проще|повтор/i.test(line))
+    .slice(0, 4);
+
+  if (effectLines.length > 0) {
+    return effectLines;
+  }
+
+  return source.slice(0, 4);
+}
+
 function parseImplementationCards(rawText) {
   const text = (rawText || "").trim();
   if (!text) return null;
@@ -619,6 +637,7 @@ export default function App() {
 
   const [leadSubmitting, setLeadSubmitting] = useState(false);
   const [leadSubmitError, setLeadSubmitError] = useState("");
+  const [isDetailsOpened, setIsDetailsOpened] = useState(false);
   const [isFullAnalysisUnlocked, setIsFullAnalysisUnlocked] = useState(true);
   const [isUnlockLoading, setIsUnlockLoading] = useState(false);
   const [unlockLoadingStepIndex, setUnlockLoadingStepIndex] = useState(0);
@@ -641,6 +660,11 @@ export default function App() {
   const fullAnalysis = useMemo(() => result?.analysis || FALLBACK_ANALYSIS_TEXT, [result]);
   const { typedText, isTyping } = useTypewriter(fullAnalysis, Boolean(result) && status === "success");
   const analysisCards = useMemo(() => splitAnalysisIntoCards(typedText), [typedText]);
+  const pitchCards = useMemo(
+    () => analysisCards.filter((card) => ["insight", "fit", "solutions"].includes(card.key)).slice(0, 3),
+    [analysisCards]
+  );
+  const pitchOutcomeBullets = useMemo(() => extractPitchOutcomeBullets(analysisCards), [analysisCards]);
   const hasValidServerPreview = useMemo(() => validateServerPreview(result?.preview), [result?.preview]);
   const preUnlockPreview = useMemo(
     () => {
@@ -691,6 +715,7 @@ export default function App() {
     setSolutionError("");
     setFinalCtaStatus("idle");
     setFinalCtaError("");
+    setIsDetailsOpened(false);
 
     if (!preserveLead) {
       setLeadSubmitError("");
@@ -931,15 +956,38 @@ export default function App() {
     }
   }
 
-  function onOpenPlanStep() {
+  async function onOpenPlanStep() {
+    if (solutionStatus === "loading") {
+      return;
+    }
+
+    setIsDetailsOpened(true);
     trackPlanCtaClicked({
       hasWebsite: Boolean(quizAnswers?.hasWebsite),
       lossesReady: Boolean(lossesText?.trim())
     });
-    requestSolutionOffer();
+
+    let lossesForPlan = lossesText?.trim() || "";
+    if (!lossesForPlan) {
+      const analysisProblems = extractProblemsForLosses(fullAnalysis);
+      if (analysisProblems) {
+        try {
+          const response = await estimateBusinessLosses(analysisProblems, buildAnalysisInput());
+          lossesForPlan = response?.losses || "";
+          if (lossesForPlan) {
+            setLossesText(lossesForPlan);
+            setLossesStatus("success");
+          }
+        } catch {
+          // Silent fallback: details screen should still open even if losses API fails.
+        }
+      }
+    }
+
+    requestSolutionOffer(lossesForPlan);
   }
 
-  async function requestSolutionOffer() {
+  async function requestSolutionOffer(lossesTextOverride = "") {
     const hasWebsite = Boolean(quizAnswers?.hasWebsite);
     const channels = Array.isArray(quizAnswers?.acquisitionChannels) ? quizAnswers.acquisitionChannels : [];
     const trafficSources = channels.length > 1 ? "multiple" : "single";
@@ -951,7 +999,9 @@ export default function App() {
     const siteTypeForPlan = hasWebsite ? platformName : null;
     const hasRepeatSales = quizAnswers?.hasRepeatSales || "unknown";
 
-    if (!fullAnalysis || !lossesText) {
+    const lossesForRequest = lossesTextOverride || lossesText || "Потери не рассчитаны";
+
+    if (!fullAnalysis) {
       setSolutionStatus("error");
       setSolutionError("Не хватает данных для персонального предложения.");
       return;
@@ -967,7 +1017,7 @@ export default function App() {
     try {
       const response = await createSolutionOffer({
         analysisText: fullAnalysis,
-        lossesText,
+        lossesText: lossesForRequest,
         siteType: siteTypeForPlan,
         niche: quizAnswers?.niche || null,
         hasWebsite,
@@ -1066,68 +1116,44 @@ export default function App() {
         {result && (
           <section className="results fade-in delay-3">
             <article className="result-card partial-analysis-intro">
-              <h2>Мы уже нашли несколько проблем, но это только часть анализа</h2>
+              <h2>Для вашей ситуации лучше всего подойдёт</h2>
             </article>
 
-            {visibleAnalysisCards.map((card) => (
+            {(pitchCards.length > 0 ? pitchCards : visibleAnalysisCards.slice(0, 3)).map((card) => (
               <article key={`${card.key}-${card.title}`} className="result-card">
                 <h2>{card.title}</h2>
                 <p>{card.body}</p>
               </article>
             ))}
 
-            {isTyping && <span className="typing-cursor">|</span>}
-
-            {!isFullAnalysisUnlocked && hiddenBlocksCount > 0 && isUnlockLoading && (
-              <section className="unlock-loading-wrap fade-slide-in" aria-live="polite">
-                {UNLOCK_LOADING_STEPS.map((step, index) => (
-                  <p key={step} className={`unlock-loading-step ${index <= unlockLoadingStepIndex ? "visible" : ""}`}>
-                    {step}
-                  </p>
-                ))}
-              </section>
+            {pitchOutcomeBullets.length > 0 && (
+              <article className="result-card">
+                <h2>Что это даст</h2>
+                <ul>
+                  {pitchOutcomeBullets.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </article>
             )}
 
-            {(isFullAnalysisUnlocked || hiddenBlocksCount === 0) && (
+            <section className="plan-cta-wrap">
+              <h3>Если хотите, покажем детали решения следующим шагом</h3>
               <div className="losses-cta-wrap">
                 <button
                   type="button"
                   className="losses-cta"
-                  onClick={onEstimateLosses}
-                  disabled={lossesStatus === "loading" || lossesStatus === "success"}
+                  onClick={onOpenPlanStep}
+                  disabled={solutionStatus === "loading"}
                 >
-                  Да, хочу узнать, что я теряю
+                  Узнать подробнее
                 </button>
               </div>
-            )}
+            </section>
 
-            {lossesStatus === "loading" && <section className="losses-loading">Считаем потери...</section>}
-
-            {lossesStatus === "error" && (
-              <section className="error-box">
-                <p>{lossesError || "Не удалось рассчитать потери. Попробуйте ещё раз."}</p>
-              </section>
-            )}
-
-            {lossesStatus === "success" && (
-              <article className="result-card losses-card">
-                <h2>💸 Что вы теряете</h2>
-                <TypewriterText text={lossesText} enabled={lossesStatus === "success"} />
-              </article>
-            )}
-
-            {lossesStatus === "success" && (
-              <section className="plan-cta-wrap">
-                <h3>Давайте обсудим план реализации</h3>
-                <button type="button" className="plan-open-btn" onClick={onOpenPlanStep}>
-                  Да, давайте
-                </button>
-              </section>
-            )}
-
-            {solutionStatus === "loading" && (
+            {isDetailsOpened && solutionStatus === "loading" && (
               <section className="plan-loading fade-slide-in">
-                <h3>Готовим план реализации</h3>
+                <h3>Подготавливаем детали решения</h3>
                 <p>
                   {isBusinessMode
                     ? "Собираем ответы и подбираем решение под ваши продажи и обработку клиентов"
@@ -1149,66 +1175,21 @@ export default function App() {
               </section>
             )}
 
-            {solutionStatus === "error" && (
+            {isDetailsOpened && solutionStatus === "error" && (
               <section className="error-box">
-                <p>{solutionError || "Не удалось сформировать план реализации. Попробуйте ещё раз."}</p>
+                <p>{solutionError || "Не удалось подготовить детали решения. Попробуйте ещё раз."}</p>
               </section>
             )}
 
-            {solutionStatus === "success" && (
+            {isDetailsOpened && solutionStatus === "success" && (
               <article className="result-card solution-card">
-                <h2>🚀 План реализации</h2>
+                <h2>Детали решения</h2>
                 <TypewriterText
                   text={solutionTextForTypewriter}
                   enabled={solutionStatus === "success"}
                   className="structured-text"
                   onComplete={() => setIsSolutionTypingDone(true)}
                 />
-                {parsedImplementationCards ? (
-                  <div
-                    className={`plan-cards-layout ${planCardsVisible ? "plan-cards-reveal" : "plan-cards-hidden"}`}
-                  >
-                    {parsedImplementationCards.beforeBlocks.map((block) => (
-                      <p key={`before-${block}`} className="structured-text">
-                        {block}
-                      </p>
-                    ))}
-
-                    <section className="plan-cards-section">
-                      <h3>🚀 Что стоит внедрить</h3>
-                      {parsedImplementationCards.cards.map((card, index) => (
-                        <div
-                          key={`${card.problem}-${index}`}
-                          className="plan-card"
-                          style={{ animationDelay: `${index * 0.14}s` }}
-                        >
-                          <div className="plan-card-priority">{mapPriorityLabel(card.priority)}</div>
-                          <div className="card-problem">
-                            🔴 Проблема
-                            <br />
-                            {card.problem}
-                          </div>
-                          <div className="card-solution">
-                            🔵 Решение
-                            <br />
-                            {card.solution}
-                          </div>
-                          <div className="card-result">
-                            🟢 Результат
-                            <br />
-                            {card.result}
-                          </div>
-                        </div>
-                      ))}
-                    </section>
-
-                    {parsedImplementationCards.afterBlocks.map((block) => (
-                      <p key={`after-${block}`} className="structured-text">
-                        {block}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
 
                 {isFullAnalysisUnlocked ? (
                   <FinalCTA
