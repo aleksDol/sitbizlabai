@@ -28,23 +28,32 @@ const ANALYSIS_STEPS = [
 const SECTION_MAPPERS = [
   {
     key: "insight",
-    label: "Для вашей ниши лучше подойдет",
-    match: ["для вашей ниши лучше подойдёт", "для вашей ниши лучше подойдет"]
+    label: "По вашим ответам лучше всего подойдёт",
+    match: [
+      "по вашим ответам лучше всего подойдёт",
+      "по вашим ответам лучше всего подойдет",
+      "для вашей ниши лучше подойдёт",
+      "для вашей ниши лучше подойдет"
+    ]
   },
   {
-    key: "problems",
-    label: "Что сейчас может мешать росту заявок",
-    match: ["что сейчас может мешать росту заявок", "что может мешать"]
+    key: "fit",
+    label: "Почему именно это",
+    match: ["почему именно это"]
   },
   {
-    key: "recommendations",
-    label: "Что обычно дает самый быстрый эффект",
-    match: ["что обычно даёт самый быстрый эффект", "что обычно дает самый быстрый эффект"]
+    key: "solutions",
+    label: "Что можно сделать",
+    match: [
+      "что можно сделать",
+      "что можно внедрить под ваш бизнес",
+      "что можно внедрить"
+    ]
   },
   {
-    key: "speed",
-    label: "Что можно внедрить под ваш бизнес",
-    match: ["что можно внедрить под ваш бизнес", "что можно внедрить"]
+    key: "next_step",
+    label: "Следующий шаг",
+    match: ["следующий шаг"]
   },
   { key: "other", label: "Рекомендации", match: ["рекомендации"] }
 ];
@@ -230,7 +239,7 @@ function enrichProblemPreview(text, { isBusinessMode = false, businessContext = 
 }
 
 function pickRecommendationPreview(cards, { isBusinessMode = false, businessContext = "" } = {}) {
-  const recommendationCard = cards.find((card) => card.key === "recommendations");
+  const recommendationCard = cards.find((card) => card.key === "solutions" || card.key === "recommendations");
   if (recommendationCard?.body) {
     const firstLine = recommendationCard.body
       .split(/\n+/)
@@ -299,11 +308,11 @@ function pickProblemTitle(problemText, index, { isBusinessMode = false } = {}) {
 }
 
 function buildPreUnlockPreview(cards, { isBusinessMode = false, businessContext = "" } = {}) {
-  const problemsCard = cards.find((card) => card.key === "problems");
+  const problemsCard = cards.find((card) => card.key === "fit" || card.key === "problems");
   let problemItems = extractPreviewProblemItems(problemsCard?.body);
   if (problemItems.length === 0) {
     problemItems = cards
-      .filter((card) => card.key !== "recommendations")
+      .filter((card) => card.key !== "solutions" && card.key !== "recommendations")
       .flatMap((card) => extractPreviewProblemItems(card.body))
       .slice(0, 5);
   }
@@ -365,7 +374,7 @@ function buildPreUnlockPreview(cards, { isBusinessMode = false, businessContext 
 
   const usedBodies = new Set(selectedProblems);
   const hiddenCards = cards.filter((card) => {
-    if (card.key !== "problems") return true;
+    if (card.key !== "fit" && card.key !== "problems") return true;
     return extractPreviewProblemItems(card.body).some((item) => !usedBodies.has(item));
   });
 
@@ -423,7 +432,9 @@ function buildPreUnlockPreviewFromServer(preview, analysisCards) {
     }
   ];
 
-  const hiddenCards = Array.isArray(analysisCards) ? analysisCards.filter((card) => card.key !== "recommendations") : [];
+  const hiddenCards = Array.isArray(analysisCards)
+    ? analysisCards.filter((card) => card.key !== "solutions" && card.key !== "recommendations")
+    : [];
 
   return {
     previewProblems: problems.map((item) => ({ title: item.title, text: item.body })),
@@ -438,7 +449,7 @@ function buildPreUnlockPreviewFromServer(preview, analysisCards) {
 
 function extractProblemsForLosses(fullAnalysis) {
   const cards = splitAnalysisIntoCards(fullAnalysis);
-  const problemsCard = cards.find((card) => card.key === "problems");
+  const problemsCard = cards.find((card) => card.key === "fit" || card.key === "problems");
   return (problemsCard?.body || fullAnalysis || "").trim();
 }
 
@@ -1216,4 +1227,3 @@ export default function App() {
     </main>
   );
 }
-

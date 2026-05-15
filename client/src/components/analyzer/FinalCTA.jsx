@@ -7,11 +7,8 @@ export function FinalCTA({
 }) {
   return (
     <section className="final-cta-wrap fade-slide-in">
-      <h3>Можем показать, как это можно реализовать под ваш бизнес</h3>
-      <p>
-        Разберем варианты внедрения и покажем, что даст самый быстрый эффект
-        без полной переделки текущей системы.
-      </p>
+      <h3>Можно подготовить детальный план внедрения под ваш бизнес</h3>
+      <p>Покажем, что именно можно сделать, с чего лучше начать и сколько этапов потребуется.</p>
 
       {status !== "success" && (
         <button type="button" className="implement-cta" onClick={onClick} disabled={status === "loading"}>
@@ -21,14 +18,14 @@ export function FinalCTA({
               Отправляем...
             </span>
           ) : (
-            "Да, хочу посмотреть варианты"
+            "Хочу получить детальный план"
           )}
         </button>
       )}
 
       {status === "success" && (
         <div className="final-cta-success fade-up">
-          <p className="final-cta-success-title">Контакт сохранен. Скоро свяжемся и покажем подходящие варианты.</p>
+          <p className="final-cta-success-title">Контакт сохранен. Скоро свяжемся и покажем подходящий план.</p>
           <p className="final-cta-success-sub">Обычно отвечаем в течение 10-30 минут</p>
           {telegramUrl ? (
             <a className="final-cta-telegram" href={telegramUrl} target="_blank" rel="noreferrer">
