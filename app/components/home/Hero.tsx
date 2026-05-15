@@ -11,15 +11,17 @@ export function Hero({ productUrl }: HeroProps) {
   return (
     <section className={styles.hero}>
       <div className={styles.heroBadges}>
-        <span className={styles.badge}>1 минута</span>
-        <span className={styles.badge}>Слабые места</span>
-        <span className={styles.badge}>Потери денег</span>
+        <span className={styles.badge}>Под ваш бизнес</span>
+        <span className={styles.badge}>Без сложных терминов</span>
+        <span className={styles.badge}>С фокусом на заявки</span>
       </div>
 
-      <h1 className={styles.heroTitle}>Анализ сайта, который показывает, где вы теряете деньги</h1>
+      <h1 className={styles.heroTitle}>Покажем, какой сайт и система продаж подойдут именно вашему бизнесу</h1>
 
       <p className={styles.heroLead}>
-        За 1 минуту получите разбор сайта: слабые места, потери и план, как увеличить заявки
+        AI анализирует, чем занимается бизнес, как сейчас приходят клиенты и что мешает получать больше заявок. Затем показывает,
+        какой формат сайта подойдёт лучше, нужна ли CRM, стоит ли автоматизировать продажи и какие решения дадут самый быстрый
+        эффект.
       </p>
 
       <div className={styles.actions}>
@@ -28,7 +30,7 @@ export function Hero({ productUrl }: HeroProps) {
           href="/analyzer"
           onClick={() => window.ym?.(108548080, "reachGoal", "go_to_analyzer_from_home")}
         >
-          Проверить сайт
+          Подобрать решение
         </Link>
         {productUrl ? (
           <Link className={styles.buttonSecondary} href={productUrl}>

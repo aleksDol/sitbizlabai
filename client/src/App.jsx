@@ -17,32 +17,48 @@ import { getFriendlyErrorMessage } from "./utils/error.utils";
 import { reachMetrikaGoal } from "./utils/metrika";
 
 const ANALYSIS_STEPS = [
-  { id: "business", label: "Считываем данные бизнеса", requiresWebsite: false },
-  { id: "site", label: "Проверяем сайт и структуру", requiresWebsite: true },
-  { id: "platform", label: "Определяем платформу сайта", requiresWebsite: true },
-  { id: "channels", label: "Оцениваем каналы привлечения", requiresWebsite: false },
-  { id: "losses", label: "Ищем потери в воронке", requiresWebsite: false },
-  { id: "plan", label: "Формируем план реализации", requiresWebsite: false }
+  { id: "business", label: "Уточняем контекст бизнеса", requiresWebsite: false },
+  { id: "site", label: "Смотрим текущий сценарий заявок", requiresWebsite: true },
+  { id: "platform", label: "Понимаем, где теряются клиенты", requiresWebsite: true },
+  { id: "channels", label: "Разбираем каналы и обращения", requiresWebsite: false },
+  { id: "losses", label: "Выделяем точки быстрого эффекта", requiresWebsite: false },
+  { id: "plan", label: "Собираем план внедрения", requiresWebsite: false }
 ];
 
 const SECTION_MAPPERS = [
-  { key: "score", label: "Общая оценка", match: ["общая оценка"] },
-  { key: "problems", label: "Проблемы", match: ["главные проблемы", "проблемы"] },
-  { key: "strengths", label: "Сильные стороны", match: ["сильные стороны"] },
-  { key: "recommendations", label: "Рекомендации", match: ["как улучшить", "рекомендации"] },
-  { key: "speed", label: "Скорость сайта", match: ["скорость сайта", "скорость"] }
+  {
+    key: "insight",
+    label: "Для вашей ниши лучше подойдет",
+    match: ["для вашей ниши лучше подойдёт", "для вашей ниши лучше подойдет"]
+  },
+  {
+    key: "problems",
+    label: "Что сейчас может мешать росту заявок",
+    match: ["что сейчас может мешать росту заявок", "что может мешать"]
+  },
+  {
+    key: "recommendations",
+    label: "Что обычно дает самый быстрый эффект",
+    match: ["что обычно даёт самый быстрый эффект", "что обычно дает самый быстрый эффект"]
+  },
+  {
+    key: "speed",
+    label: "Что можно внедрить под ваш бизнес",
+    match: ["что можно внедрить под ваш бизнес", "что можно внедрить"]
+  },
+  { key: "other", label: "Рекомендации", match: ["рекомендации"] }
 ];
 
 const PLAN_LOADING_STEPS = [
-  "Учитываем нишу и каналы привлечения",
-  "Проверяем данные по сайту",
-  "Подбираем подходящие решения",
-  "Формируем понятный план"
+  "Собираем контекст по бизнесу и продажам",
+  "Смотрим, где теряются заявки",
+  "Подбираем решения под ваш сценарий",
+  "Собираем короткий план внедрения"
 ];
 const UNLOCK_LOADING_STEPS = [
-  "⏺ Анализируем точки потери клиентов...",
-  "⏺ Формируем рекомендации...",
-  "⏺ Подготавливаем полный разбор..."
+  "⏺ Смотрим, что сейчас тормозит рост заявок...",
+  "⏺ Выделяем решения с быстрым эффектом...",
+  "⏺ Готовим персональный разбор..."
 ];
 
 function normalizeHeading(heading) {
@@ -598,8 +614,8 @@ export default function App() {
   const [leadId, setLeadId] = useState(null);
   const [finalCtaStatus, setFinalCtaStatus] = useState("idle");
   const [finalCtaError, setFinalCtaError] = useState("");
-  const isBusinessMode = false;
-  const analysisModeSubtitle = "Найдём ошибки в UX, SEO и конверсии";
+  const isBusinessMode = true;
+  const analysisModeSubtitle = "Покажем, что даст быстрый эффект именно для вашего бизнеса";
 
   const analysisSteps = useMemo(() => {
     const hasWebsite = Boolean(quizAnswers?.hasWebsite);
@@ -1200,5 +1216,4 @@ export default function App() {
     </main>
   );
 }
-
 

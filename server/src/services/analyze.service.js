@@ -19,6 +19,9 @@ export async function analyzeSite(urlObject, analysisInput = null) {
           hasRepeatSales: analysisInput.hasRepeatSales || "unknown",
           trafficSource: analysisInput.trafficSource || null,
           mainGoal: analysisInput.mainGoal || null,
+          businessDescription: analysisInput.businessDescription || analysisInput.niche || null,
+          mainPain: analysisInput.mainPain || analysisInput.mainGoal || null,
+          communicationMethod: analysisInput.communicationMethod || analysisInput.trafficSource || null,
           contact: analysisInput.contact || null
         }
       : null,

@@ -1,4 +1,4 @@
-﻿import { ERROR_CODES } from "../config/error.constants.js";
+import { ERROR_CODES } from "../config/error.constants.js";
 import { analyzeBusinessWithoutWebsite, analyzeSite } from "../services/analyze.service.js";
 import {
   fetchBusinessLosses,
@@ -67,6 +67,24 @@ export async function lossesController(req, res, next) {
             trafficSource:
               typeof inputPayload.trafficSource === "string" ? inputPayload.trafficSource.trim() : null,
             mainGoal: typeof inputPayload.mainGoal === "string" ? inputPayload.mainGoal.trim() : null,
+            businessDescription:
+              typeof inputPayload.businessDescription === "string"
+                ? inputPayload.businessDescription.trim()
+                : typeof inputPayload.niche === "string"
+                  ? inputPayload.niche.trim()
+                  : null,
+            mainPain:
+              typeof inputPayload.mainPain === "string"
+                ? inputPayload.mainPain.trim()
+                : typeof inputPayload.mainGoal === "string"
+                  ? inputPayload.mainGoal.trim()
+                  : null,
+            communicationMethod:
+              typeof inputPayload.communicationMethod === "string"
+                ? inputPayload.communicationMethod.trim()
+                : typeof inputPayload.trafficSource === "string"
+                  ? inputPayload.trafficSource.trim()
+                  : null,
             contact: typeof inputPayload.contact === "string" ? inputPayload.contact.trim() : null
           }
         : null;

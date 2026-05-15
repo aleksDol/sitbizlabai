@@ -1,64 +1,39 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { reachMetrikaGoal } from "../../utils/metrika";
 
-const CLIENT_SOURCES = [
-  "Реклама",
-  "SEO",
-  "Telegram / соцсети",
-  "Рекомендации",
-  "Холодные продажи",
-  "Несколько источников"
+const MAIN_PAIN_OPTIONS = [
+  "Мало заявок",
+  "Дорогая реклама",
+  "Теряются клиенты",
+  "Долго отвечаем клиентам",
+  "Все приходится делать вручную",
+  "Нет стабильного потока клиентов"
 ];
 
-const MAIN_GOALS = [
-  "Получать больше заявок",
-  "Не терять текущих клиентов",
-  "Повысить окупаемость рекламы",
-  "Навести порядок в обработке заявок",
-  "Увеличить повторные продажи"
+const COMMUNICATION_METHOD_OPTIONS = [
+  "Через Telegram",
+  "Через сайт",
+  "Через WhatsApp",
+  "Через менеджеров",
+  "Через CRM",
+  "В основном вручную"
 ];
-
-function parseWebsite(rawValue) {
-  const value = rawValue.trim();
-  if (!value) return null;
-
-  try {
-    const parsed = new URL(value);
-    if (["http:", "https:"].includes(parsed.protocol)) {
-      return parsed.href;
-    }
-  } catch {
-    // Try plain domain below.
-  }
-
-  const looksLikeDomain = !/\s/.test(value) && value.includes(".");
-  if (looksLikeDomain) {
-    try {
-      const parsed = new URL(`https://${value}`);
-      return parsed.href;
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
-}
 
 export function AnalyzerQuiz({ onComplete }) {
   const [step, setStep] = useState(1);
-  const [websiteInput, setWebsiteInput] = useState("");
-  const [clientSource, setClientSource] = useState("");
-  const [mainGoal, setMainGoal] = useState("");
+  const [businessDescription, setBusinessDescription] = useState("");
+  const [mainPain, setMainPain] = useState("");
+  const [communicationMethod, setCommunicationMethod] = useState("");
   const [contact, setContact] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canProceed = useMemo(() => {
-    if (step === 1) return Boolean(parseWebsite(websiteInput));
-    if (step === 2) return Boolean(clientSource);
-    if (step === 3) return Boolean(mainGoal);
+    if (step === 1) return businessDescription.trim().length >= 3;
+    if (step === 2) return Boolean(mainPain);
+    if (step === 3) return Boolean(communicationMethod);
     if (step === 4) return contact.trim().length > 3 && !isSubmitting;
     return false;
-  }, [step, websiteInput, clientSource, mainGoal, contact, isSubmitting]);
+  }, [step, businessDescription, mainPain, communicationMethod, contact, isSubmitting]);
 
   function onNext() {
     if (!canProceed) return;
@@ -72,16 +47,13 @@ export function AnalyzerQuiz({ onComplete }) {
   async function onFinish() {
     if (!canProceed || isSubmitting) return;
 
-    const parsedWebsite = parseWebsite(websiteInput);
-    if (!parsedWebsite) return;
-
     try {
       window.dispatchEvent(
         new CustomEvent("sitebizai_quiz_go_to_analysis_click", {
           detail: {
-            hasWebsite: true,
-            clientSource,
-            mainGoal
+            hasWebsite: false,
+            mainPain,
+            communicationMethod
           }
         })
       );
@@ -93,13 +65,16 @@ export function AnalyzerQuiz({ onComplete }) {
     setIsSubmitting(true);
     try {
       await onComplete({
-        niche: null,
-        hasWebsite: true,
-        websiteUrl: parsedWebsite,
-        acquisitionChannels: [clientSource],
+        niche: businessDescription.trim(),
+        hasWebsite: false,
+        websiteUrl: null,
+        acquisitionChannels: [communicationMethod],
         hasRepeatSales: "unknown",
-        clientSource,
-        mainGoal,
+        clientSource: communicationMethod,
+        mainGoal: mainPain,
+        businessDescription: businessDescription.trim(),
+        mainPain,
+        communicationMethod,
         contact: contact.trim()
       });
     } finally {
@@ -114,27 +89,27 @@ export function AnalyzerQuiz({ onComplete }) {
       <div key={step} className="quiz-step fade-slide-in">
         {step === 1 && (
           <>
-            <h2>Укажите сайт компании</h2>
+            <h2>Чем занимаетесь?</h2>
+            <p className="quiz-input-hint">Коротко: чем занимаетесь и кто ваш клиент</p>
             <input
               type="text"
-              value={websiteInput}
-              onChange={(event) => setWebsiteInput(event.target.value)}
-              placeholder="https://site.ru"
+              value={businessDescription}
+              onChange={(event) => setBusinessDescription(event.target.value)}
+              placeholder="Например: студия кухни, продажа одежды в Telegram, юридические услуги"
             />
-            <p className="quiz-input-hint">Проанализируем, где могут теряться заявки и рекламный трафик</p>
           </>
         )}
 
         {step === 2 && (
           <>
-            <h2>Откуда сейчас приходят клиенты?</h2>
+            <h2>Что сейчас беспокоит больше всего?</h2>
             <div className="quiz-options-grid">
-              {CLIENT_SOURCES.map((option) => (
+              {MAIN_PAIN_OPTIONS.map((option) => (
                 <button
                   key={option}
                   type="button"
-                  className={`quiz-option ${clientSource === option ? "selected" : ""}`}
-                  onClick={() => setClientSource(option)}
+                  className={`quiz-option ${mainPain === option ? "selected" : ""}`}
+                  onClick={() => setMainPain(option)}
                 >
                   {option}
                 </button>
@@ -145,14 +120,14 @@ export function AnalyzerQuiz({ onComplete }) {
 
         {step === 3 && (
           <>
-            <h2>Что сейчас важнее всего?</h2>
+            <h2>Как сейчас общаетесь с клиентами?</h2>
             <div className="quiz-options-grid">
-              {MAIN_GOALS.map((option) => (
+              {COMMUNICATION_METHOD_OPTIONS.map((option) => (
                 <button
                   key={option}
                   type="button"
-                  className={`quiz-option ${mainGoal === option ? "selected" : ""}`}
-                  onClick={() => setMainGoal(option)}
+                  className={`quiz-option ${communicationMethod === option ? "selected" : ""}`}
+                  onClick={() => setCommunicationMethod(option)}
                 >
                   {option}
                 </button>
@@ -170,7 +145,7 @@ export function AnalyzerQuiz({ onComplete }) {
               onChange={(event) => setContact(event.target.value)}
               placeholder="@telegram или номер телефона"
             />
-            <p className="quiz-input-hint">Анализ откроется сразу. Контакт нужен для сохранения разбора.</p>
+            <p className="quiz-input-hint">Результат откроется сразу. Контакт нужен, чтобы сохранить разбор.</p>
           </>
         )}
       </div>
@@ -190,7 +165,7 @@ export function AnalyzerQuiz({ onComplete }) {
           </button>
         ) : (
           <button type="button" className="quiz-primary-btn" disabled={!canProceed} onClick={onFinish}>
-            {isSubmitting ? "Отправляем..." : "Показать результат"}
+            {isSubmitting ? "Запускаем разбор..." : "Показать результат"}
           </button>
         )}
       </div>
